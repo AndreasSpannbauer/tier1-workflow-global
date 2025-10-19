@@ -1,0 +1,492 @@
+---
+description: "Execute Tier 1 workflow for epic implementation (sequential path)"
+argument-hint: "<epic-id>"
+allowed-tools: [Read, Write, Bash, Task]
+---
+
+# Execute Tier 1 Workflow - Sequential Implementation
+
+YOU are the ORCHESTRATOR. Agents are WORKERS. You coordinate, they execute.
+
+This command executes Phase 0 (Preflight checks) and Phase 1 (Sequential implementation) for a given epic.
+
+---
+
+## PHASE 0: PREFLIGHT CHECKS
+
+Verify the epic is ready for execution before deploying any agents.
+
+### Step 0.1: Find Epic Directory
+
+```bash
+EPIC_DIR=$(find .tasks -name "${ARGUMENTS}-*" -type d | head -1)
+```
+
+If not found:
+```
+❌ Epic directory not found for: ${ARGUMENTS}
+Check: .tasks/backlog/${ARGUMENTS}-*/
+Run: /task-list to view available epics
+```
+
+### Step 0.2: Verify Required Files
+
+Check the following files exist and are complete:
+
+```bash
+# Required files
+[ -f "${EPIC_DIR}/spec.md" ] || echo "MISSING: spec.md"
+[ -f "${EPIC_DIR}/architecture.md" ] || echo "MISSING: architecture.md"
+[ -f "${EPIC_DIR}/implementation-details/file-tasks.md" ] || echo "MISSING: file-tasks.md"
+```
+
+**Expected files:**
+- ✅ `spec.md` - Epic specification with problem statement and requirements
+- ✅ `architecture.md` - Architecture decisions and design
+- ✅ `implementation-details/file-tasks.md` - Prescriptive implementation plan
+
+If any files are missing:
+```
+❌ Epic not ready for execution
+
+Missing files:
+- [list missing files]
+
+Run: /refine-epic ${ARGUMENTS}
+```
+
+### Step 0.3: Verify Git Working Directory
+
+Check that the working directory is clean before starting:
+
+```bash
+git status --porcelain
+```
+
+If output is not empty:
+```
+❌ Git working directory not clean
+
+Uncommitted changes detected:
+[show git status output]
+
+Commit or stash changes before running workflow:
+git add .
+git commit -m "Your commit message"
+
+OR
+
+git stash
+```
+
+### Step 0.4: Display Epic Summary
+
+Read and display epic information:
+
+```bash
+# Extract epic title
+grep "^# " ${EPIC_DIR}/spec.md | head -1
+
+# Count files to modify
+grep -E "^- \`|^### " ${EPIC_DIR}/implementation-details/file-tasks.md | wc -l
+```
+
+Display:
+```
+✅ Preflight checks passed
+
+Epic: ${ARGUMENTS}
+Title: [epic title from spec.md]
+Files to modify: [count]
+Mode: Sequential implementation
+```
+
+**If all checks pass, proceed to Phase 1.**
+
+---
+
+## PHASE 1: SEQUENTIAL IMPLEMENTATION
+
+Deploy a single implementation agent to execute the prescriptive plan.
+
+### Step 1.1: Create Output Directory
+
+```bash
+mkdir -p .workflow/outputs/${ARGUMENTS}
+```
+
+### Step 1.2: Read Epic Context
+
+Read the following files to provide full context to the implementation agent:
+
+1. **Specification**: `${EPIC_DIR}/spec.md`
+2. **Architecture**: `${EPIC_DIR}/architecture.md`
+3. **Prescriptive Plan**: `${EPIC_DIR}/implementation-details/file-tasks.md`
+
+### Step 1.3: Deploy Implementation Agent
+
+Use the Task tool to deploy an implementation agent with the complete context.
+
+**Agent Definition Location**: `~/tier1_workflow_global/implementation/agent_definitions/implementation_agent_v1.md`
+
+**Domain Briefing Location** (select appropriate domain):
+- Backend: `~/tier1_workflow_global/implementation/agent_briefings/backend_implementation.md`
+- Frontend: `~/tier1_workflow_global/implementation/agent_briefings/frontend_implementation.md`
+- Database: `~/tier1_workflow_global/implementation/agent_briefings/database_implementation.md`
+
+**Project Architecture**: `~/tier1_workflow_global/implementation/agent_briefings/project_architecture.md`
+
+**Agent Prompt Template:**
+
+```markdown
+YOU ARE: Implementation Agent V1
+
+[BEGIN AGENT DEFINITION]
+[Insert complete contents of ~/tier1_workflow_global/implementation/agent_definitions/implementation_agent_v1.md]
+[END AGENT DEFINITION]
+
+---
+
+DOMAIN BRIEFING:
+
+[BEGIN DOMAIN BRIEFING]
+[Insert complete contents of ~/tier1_workflow_global/implementation/agent_briefings/backend_implementation.md]
+(or appropriate domain briefing)
+[END DOMAIN BRIEFING]
+
+---
+
+PROJECT ARCHITECTURE:
+
+[BEGIN PROJECT ARCHITECTURE]
+[Insert complete contents of ~/tier1_workflow_global/implementation/agent_briefings/project_architecture.md]
+[END PROJECT ARCHITECTURE]
+
+---
+
+EPIC SPECIFICATION:
+
+[BEGIN EPIC SPECIFICATION]
+[Insert complete contents of ${EPIC_DIR}/spec.md]
+[END EPIC SPECIFICATION]
+
+---
+
+ARCHITECTURE:
+
+[BEGIN ARCHITECTURE]
+[Insert complete contents of ${EPIC_DIR}/architecture.md]
+[END ARCHITECTURE]
+
+---
+
+PRESCRIPTIVE PLAN (YOUR SOURCE OF TRUTH):
+
+[BEGIN PRESCRIPTIVE PLAN]
+[Insert complete contents of ${EPIC_DIR}/implementation-details/file-tasks.md]
+[END PRESCRIPTIVE PLAN]
+
+---
+
+OUTPUT FILE:
+
+Write your structured results to:
+.workflow/outputs/${ARGUMENTS}/phase1_results.json
+
+Format:
+{
+  "status": "success|partial|failed",
+  "epic_id": "${ARGUMENTS}",
+  "agent_type": "implementation-agent-v1",
+  "execution_mode": "sequential",
+  "files_created": ["path/to/file1.py", "path/to/file2.py"],
+  "files_modified": ["path/to/existing_file.py"],
+  "issues_encountered": [
+    {
+      "description": "Issue description",
+      "file": "path/to/file.py",
+      "resolution": "How it was resolved"
+    }
+  ],
+  "clarifications_needed": [
+    "Any questions or unclear requirements"
+  ],
+  "completion_timestamp": "2025-10-19T14:30:00Z"
+}
+
+---
+
+BEGIN IMPLEMENTATION.
+
+Follow the prescriptive plan exactly. Create and modify files as specified. Add error handling. Write clean, maintainable code. Document any issues in the results JSON.
+
+WHEN COMPLETE: Write results to .workflow/outputs/${ARGUMENTS}/phase1_results.json
+```
+
+**Deploy the agent using Task tool:**
+
+```python
+Task(
+    subagent_type="general-purpose",
+    description=f"Sequential implementation for {ARGUMENTS}",
+    prompt="""
+    [Complete agent prompt from template above]
+    """
+)
+```
+
+### Step 1.4: Wait for Agent Completion
+
+The agent will:
+1. Read all provided context (agent definition, briefings, spec, architecture, plan)
+2. Execute the prescriptive plan systematically
+3. Create/modify files as specified
+4. Add error handling to all operations
+5. Validate implementation (syntax, linting)
+6. Write structured results to JSON file
+
+**Monitor agent progress** - The agent will provide status updates as it works.
+
+### Step 1.5: Read and Display Results
+
+After agent completes, read the results file:
+
+```bash
+cat .workflow/outputs/${ARGUMENTS}/phase1_results.json
+```
+
+**Parse and display results:**
+
+```json
+{
+  "status": "success|partial|failed",
+  "epic_id": "EPIC-XXX",
+  "files_created": 5,
+  "files_modified": 3,
+  "issues_encountered": 2,
+  "clarifications_needed": 0
+}
+```
+
+Display:
+```
+✅ Phase 1 Complete: Implementation
+
+Status: [success/partial/failed]
+Files created: [count]
+Files modified: [count]
+Issues encountered: [count]
+Clarifications needed: [count]
+```
+
+**If issues encountered:**
+```
+⚠️ Issues Encountered:
+
+1. [Issue description]
+   File: [file path]
+   Resolution: [how it was resolved]
+
+2. [Issue description]
+   File: [file path]
+   Resolution: [how it was resolved]
+```
+
+**If clarifications needed:**
+```
+⚠️ Clarifications Needed:
+
+1. [Question or unclear requirement]
+2. [Question or unclear requirement]
+```
+
+### Step 1.6: Status Check
+
+**If status = "success":**
+```
+✅ Implementation completed successfully
+
+Next steps:
+- Review changes: git diff
+- Run validation: [validation commands]
+- Test functionality manually
+- Proceed to Phase 2: Validation
+```
+
+**If status = "partial":**
+```
+⚠️ Implementation partially complete
+
+Some tasks completed, but issues remain.
+Review results JSON for details: .workflow/outputs/${ARGUMENTS}/phase1_results.json
+
+Address issues before proceeding:
+- Fix remaining issues manually
+- OR: Deploy fixer agent
+- OR: Update prescriptive plan and retry
+```
+
+**If status = "failed":**
+```
+❌ Implementation failed
+
+Review results JSON: .workflow/outputs/${ARGUMENTS}/phase1_results.json
+
+Common failures:
+- Missing dependencies (install required packages)
+- Import errors (check module paths)
+- Type errors (add type hints)
+- Syntax errors (fix and retry)
+
+Manual intervention required.
+```
+
+---
+
+## ERROR HANDLING
+
+### Epic Not Found
+```
+❌ Error: Epic directory not found
+
+Epic ID: ${ARGUMENTS}
+Searched: .tasks/backlog/
+         .tasks/current/
+
+Available epics:
+[list epics in .tasks/]
+
+Run: /task-list
+```
+
+### Missing Files
+```
+❌ Error: Required files missing
+
+Epic: ${ARGUMENTS}
+Missing:
+- spec.md [create with /spec-epic ${ARGUMENTS}]
+- architecture.md [create with /spec-epic ${ARGUMENTS}]
+- file-tasks.md [create with /refine-epic ${ARGUMENTS}]
+
+Fix: Complete epic specification before running workflow
+```
+
+### Git Not Clean
+```
+❌ Error: Git working directory not clean
+
+Uncommitted changes:
+[git status output]
+
+Options:
+1. Commit changes: git add . && git commit -m "message"
+2. Stash changes: git stash
+3. Reset changes: git reset --hard (WARNING: destructive)
+
+Run workflow after working directory is clean.
+```
+
+### Agent Execution Failed
+```
+❌ Error: Agent execution failed
+
+Agent: implementation-agent-v1
+Epic: ${ARGUMENTS}
+
+Results: .workflow/outputs/${ARGUMENTS}/phase1_results.json
+Status: failed
+
+Review agent output for error details.
+Check results JSON for specific issues.
+```
+
+---
+
+## PROGRESS INDICATORS
+
+Use these throughout execution:
+
+- ✅ Success / Completed
+- ⚠️ Warning / Partial completion
+- ❌ Error / Failed
+- 🔍 Checking / Validating
+- 📝 Reading / Parsing
+- 🚀 Starting / Executing
+- 📊 Results / Summary
+
+---
+
+## NEXT PHASES (NOT IMPLEMENTED YET)
+
+After Phase 1 completes successfully:
+
+**Phase 2: Validation**
+- Build & Lint Gate (mandatory)
+- Architecture Validation (optional)
+- Contract Validation (optional)
+- Run Existing Tests (optional)
+
+**Phase 3: Post-Mortem**
+- Single agent analyzes execution
+- Documents what worked / didn't work
+- Suggests improvements
+
+**Phase 4: Commit & Cleanup**
+- Stage changes
+- Generate commit message
+- Create commit
+- Mark epic complete
+
+**Note:** These phases will be added in future iterations. For now, Phase 1 provides the foundation for sequential implementation.
+
+---
+
+## COMPLETION SUMMARY
+
+After Phase 1 completes:
+
+```
+✅ Workflow Phase 1 Complete: ${ARGUMENTS}
+
+Implementation: ✅ Success
+Files created: [count]
+Files modified: [count]
+Issues: [count]
+
+Results: .workflow/outputs/${ARGUMENTS}/phase1_results.json
+
+Next steps:
+1. Review changes: git diff
+2. Test functionality manually
+3. Run validation manually:
+   - Python: ruff check . && mypy src/
+   - TypeScript: npm run build:ts
+4. Commit when ready: git add . && git commit -m "feat: ${ARGUMENTS}"
+
+Future: Phase 2 (Validation) will automate these steps.
+```
+
+---
+
+## NOTES FOR ORCHESTRATOR
+
+**Remember:**
+1. **You coordinate, agents execute** - Don't do implementation yourself
+2. **Read before deploying** - Agent needs all context (definition, briefings, spec, plan)
+3. **Wait for completion** - Don't proceed until agent writes results JSON
+4. **Parse results** - Understand what happened before declaring success
+5. **Handle errors gracefully** - Provide clear guidance for manual intervention
+
+**Agent Composition:**
+- **Agent Definition** = Phase-specific rules (what agent MUST/MUST NOT do)
+- **Domain Briefing** = Domain-specific patterns (project conventions, coding standards)
+- **Project Architecture** = Project-wide architectural decisions
+- **Spec + Architecture** = What to build
+- **Prescriptive Plan** = Exactly how to build it (source of truth)
+
+**Output Structure:**
+- `.workflow/outputs/${ARGUMENTS}/phase1_results.json` - Implementation results
+- Future phases will add more outputs in this directory
+
+**This is Phase 0 + Phase 1 only. Future phases will be added as separate iterations.**
