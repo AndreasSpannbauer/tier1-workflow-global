@@ -1330,61 +1330,321 @@ echo "   Merge summary: .workflow/outputs/${ARGUMENTS}/merge_summary.json"
 echo ""
 ```
 
-**Proceed to Phase 2 (Validation)**
+**Proceed to Phase 3 (Validation)**
 
 ---
 
-## PHASE 2: VALIDATION
+## PHASE 3: VALIDATION WITH RETRY LOOP
 
-Validate the implementation with automated checks.
+Validate the implementation with automated checks. If validation fails, deploy build fixer agent and retry.
 
 **Note:** This phase runs the same regardless of execution mode (sequential or parallel).
 
-### Step 2.1: Run Validation Checks
+### Step 3.1: Initialize Validation Attempt Counter
 
 ```bash
 echo ""
-echo "🔍 Phase 2: Validation"
+echo "🔍 Phase 3: Validation"
 echo "======================================================================"
 echo ""
 
-# Build & Lint Gate (mandatory)
-echo "Running build and lint checks..."
+# Initialize retry counter
+VALIDATION_ATTEMPT=0
+MAX_VALIDATION_ATTEMPTS=3
+VALIDATION_PASSED=0
 
-# Python validation
-if [ -d "src" ] && grep -q "\.py$" .workflow/outputs/${ARGUMENTS}/phase1_results.json 2>/dev/null; then
-  echo "  Python validation:"
-  ruff check . && echo "    ✅ Ruff check passed" || echo "    ❌ Ruff check failed"
-  mypy src/ && echo "    ✅ Mypy check passed" || echo "    ❌ Mypy check failed"
-fi
+# Store validation results for tracking
+mkdir -p .workflow/outputs/${ARGUMENTS}/validation
+```
 
-# TypeScript validation
-if [ -f "tsconfig.json" ]; then
-  echo "  TypeScript validation:"
-  npm run build:ts && echo "    ✅ TypeScript build passed" || echo "    ❌ TypeScript build failed"
-fi
+### Step 3.2: Validation Retry Loop
 
+```bash
+while [ $VALIDATION_ATTEMPT -lt $MAX_VALIDATION_ATTEMPTS ] && [ $VALIDATION_PASSED -eq 0 ]; do
+  VALIDATION_ATTEMPT=$((VALIDATION_ATTEMPT + 1))
+
+  echo ""
+  echo "────────────────────────────────────────────────────────────────────"
+  echo "Validation Attempt $VALIDATION_ATTEMPT of $MAX_VALIDATION_ATTEMPTS"
+  echo "────────────────────────────────────────────────────────────────────"
+  echo ""
+
+  # Run validation suite
+  VALIDATION_EXIT_CODE=0
+
+  # Check if package.json defines validate-all script
+  if [ -f "package.json" ] && grep -q '"validate-all"' package.json; then
+    echo "Running: npm run validate-all"
+    echo ""
+
+    npm run validate-all 2>&1 | tee .workflow/outputs/${ARGUMENTS}/validation/attempt_${VALIDATION_ATTEMPT}.log
+
+    VALIDATION_EXIT_CODE=${PIPESTATUS[0]}
+
+  else
+    # Fallback: Run individual validation commands
+    echo "ℹ️  No validate-all script found in package.json"
+    echo "   Running default validations..."
+    echo ""
+
+    # Python validation (if Python files exist)
+    if [ -d "src" ] && find src -name "*.py" -type f | grep -q .; then
+      echo "Python validation:"
+
+      # Linting
+      if command -v ruff &> /dev/null; then
+        echo "  Running: ruff check ."
+        ruff check . 2>&1 | tee -a .workflow/outputs/${ARGUMENTS}/validation/attempt_${VALIDATION_ATTEMPT}.log
+        [ ${PIPESTATUS[0]} -ne 0 ] && VALIDATION_EXIT_CODE=1
+      else
+        echo "  ⚠️  ruff not found - skipping Python linting"
+      fi
+
+      # Formatting
+      if command -v ruff &> /dev/null; then
+        echo "  Running: ruff format --check ."
+        ruff format --check . 2>&1 | tee -a .workflow/outputs/${ARGUMENTS}/validation/attempt_${VALIDATION_ATTEMPT}.log
+        [ ${PIPESTATUS[0]} -ne 0 ] && VALIDATION_EXIT_CODE=1
+      fi
+
+      # Type checking
+      if command -v mypy &> /dev/null; then
+        echo "  Running: mypy src/"
+        mypy src/ 2>&1 | tee -a .workflow/outputs/${ARGUMENTS}/validation/attempt_${VALIDATION_ATTEMPT}.log
+        [ ${PIPESTATUS[0]} -ne 0 ] && VALIDATION_EXIT_CODE=1
+      else
+        echo "  ⚠️  mypy not found - skipping type checking"
+      fi
+
+      echo ""
+    fi
+
+    # TypeScript validation (if tsconfig.json exists)
+    if [ -f "tsconfig.json" ]; then
+      echo "TypeScript validation:"
+
+      # Type checking / build
+      if [ -f "package.json" ] && grep -q '"build:ts"' package.json; then
+        echo "  Running: npm run build:ts"
+        npm run build:ts 2>&1 | tee -a .workflow/outputs/${ARGUMENTS}/validation/attempt_${VALIDATION_ATTEMPT}.log
+        [ ${PIPESTATUS[0]} -ne 0 ] && VALIDATION_EXIT_CODE=1
+      else
+        echo "  ⚠️  No build:ts script found - skipping TypeScript build"
+      fi
+
+      echo ""
+    fi
+
+    # Architecture validation (if script exists)
+    if [ -f "tools/validate_architecture.py" ]; then
+      echo "Architecture validation:"
+      echo "  Running: python3 tools/validate_architecture.py"
+      python3 tools/validate_architecture.py 2>&1 | tee -a .workflow/outputs/${ARGUMENTS}/validation/attempt_${VALIDATION_ATTEMPT}.log
+      # Non-blocking: Architecture validation failures don't fail overall validation
+      echo ""
+    fi
+
+    # Contract validation (if script exists)
+    if [ -f "tools/validate_contracts.py" ]; then
+      echo "Contract validation:"
+      echo "  Running: python3 tools/validate_contracts.py"
+      python3 tools/validate_contracts.py 2>&1 | tee -a .workflow/outputs/${ARGUMENTS}/validation/attempt_${VALIDATION_ATTEMPT}.log
+      # Non-blocking: Contract validation failures don't fail overall validation
+      echo ""
+    fi
+  fi
+
+  # Check validation result
+  if [ $VALIDATION_EXIT_CODE -eq 0 ]; then
+    echo ""
+    echo "✅ Validation passed on attempt $VALIDATION_ATTEMPT"
+    VALIDATION_PASSED=1
+
+    # Write success result
+    cat > .workflow/outputs/${ARGUMENTS}/validation/result.json << EOF
+{
+  "status": "passed",
+  "attempts": $VALIDATION_ATTEMPT,
+  "final_attempt_log": ".workflow/outputs/${ARGUMENTS}/validation/attempt_${VALIDATION_ATTEMPT}.log",
+  "timestamp": "$(date -Iseconds)"
+}
+EOF
+
+  else
+    echo ""
+    echo "❌ Validation failed on attempt $VALIDATION_ATTEMPT"
+
+    # Check if we should retry
+    if [ $VALIDATION_ATTEMPT -lt $MAX_VALIDATION_ATTEMPTS ]; then
+      echo ""
+      echo "🔧 Deploying build fixer agent (attempt $VALIDATION_ATTEMPT)..."
+      echo "────────────────────────────────────────────────────────────────────"
+      echo ""
+
+      # Deploy build fixer agent
+      # Read the agent definition and validation logs
+
+      # Use Task tool to deploy build fixer agent
+      # (This is where the orchestrator would use Task tool in actual execution)
+
+      # Agent prompt template (orchestrator will use this):
+      FIXER_PROMPT=$(cat << 'FIXER_EOF'
+YOU ARE: Build Fixer Agent V1
+
+[Read ~/tier1_workflow_global/implementation/agent_definitions/build_fixer_agent_v1.md]
+
+---
+
+EPIC ID: ${ARGUMENTS}
+
+VALIDATION LOG (failed attempt $VALIDATION_ATTEMPT):
+
+[Read .workflow/outputs/${ARGUMENTS}/validation/attempt_${VALIDATION_ATTEMPT}.log]
+
+---
+
+YOUR TASK:
+
+Fix ALL validation errors shown in the log above.
+
+1. Read error output carefully
+2. Apply auto-fixes (ruff check --fix, ruff format)
+3. Fix manual errors (type hints, imports, etc.)
+4. Re-run validation commands
+5. Write results to: .workflow/outputs/${ARGUMENTS}/fix_attempt_${VALIDATION_ATTEMPT}.json
+
+Results format:
+{
+  "status": "passed|failed",
+  "attempt_number": $VALIDATION_ATTEMPT,
+  "epic_id": "${ARGUMENTS}",
+  "validation_results": { ... },
+  "fixes_applied": [ ... ],
+  "remaining_issues": [ ... ]
+}
+
+---
+
+BEGIN FIXING.
+FIXER_EOF
+)
+
+      # Orchestrator: Deploy agent here with Task tool
+      # Task(subagent_type="general-purpose", description="Fix validation errors", prompt=FIXER_PROMPT)
+
+      echo ""
+      echo "⚠️  BUILD FIXER AGENT DEPLOYMENT REQUIRED"
+      echo ""
+      echo "The orchestrator should deploy a build fixer agent here using Task tool."
+      echo "Agent definition: ~/tier1_workflow_global/implementation/agent_definitions/build_fixer_agent_v1.md"
+      echo "Validation log: .workflow/outputs/${ARGUMENTS}/validation/attempt_${VALIDATION_ATTEMPT}.log"
+      echo ""
+      echo "After agent completes, validation will be retried."
+      echo ""
+
+      # Wait for agent completion
+      # In actual execution, orchestrator waits for agent to write fix_attempt_N.json
+
+      # Check if fix was successful
+      FIX_RESULT_FILE=".workflow/outputs/${ARGUMENTS}/fix_attempt_${VALIDATION_ATTEMPT}.json"
+
+      if [ -f "$FIX_RESULT_FILE" ]; then
+        FIX_STATUS=$(jq -r '.status' "$FIX_RESULT_FILE")
+        echo "Build fixer result: $FIX_STATUS"
+
+        if [ "$FIX_STATUS" = "passed" ]; then
+          echo "  ✅ Build fixer successfully fixed all issues"
+        else
+          echo "  ⚠️  Build fixer could not fix all issues"
+          jq -r '.remaining_issues[]? | "    - \(.issue // .description)"' "$FIX_RESULT_FILE" || true
+        fi
+      else
+        echo "  ⚠️  Build fixer did not produce results file (expected: $FIX_RESULT_FILE)"
+      fi
+
+      echo ""
+      echo "Retrying validation..."
+
+    else
+      echo ""
+      echo "⚠️  Maximum validation attempts ($MAX_VALIDATION_ATTEMPTS) reached"
+      echo ""
+      echo "Validation failed after $VALIDATION_ATTEMPT attempts."
+      echo "Logs: .workflow/outputs/${ARGUMENTS}/validation/"
+      echo ""
+      echo "Manual intervention recommended but workflow will continue."
+      echo ""
+
+      # Write failure result
+      cat > .workflow/outputs/${ARGUMENTS}/validation/result.json << EOF
+{
+  "status": "failed",
+  "attempts": $VALIDATION_ATTEMPT,
+  "final_attempt_log": ".workflow/outputs/${ARGUMENTS}/validation/attempt_${VALIDATION_ATTEMPT}.log",
+  "max_attempts_reached": true,
+  "timestamp": "$(date -Iseconds)"
+}
+EOF
+    fi
+  fi
+
+done
+```
+
+### Step 3.3: Validation Summary
+
+```bash
 echo ""
-echo "✅ Phase 2 Complete: Validation"
+echo "======================================================================"
+if [ $VALIDATION_PASSED -eq 1 ]; then
+  echo "✅ Phase 3 Complete: Validation Passed"
+  echo "======================================================================"
+  echo "   Attempts: $VALIDATION_ATTEMPT"
+  echo "   Status: PASSED"
+else
+  echo "⚠️  Phase 3 Complete: Validation Failed"
+  echo "======================================================================"
+  echo "   Attempts: $VALIDATION_ATTEMPT"
+  echo "   Status: FAILED (workflow continues)"
+  echo ""
+  echo "   Review validation logs:"
+  echo "   .workflow/outputs/${ARGUMENTS}/validation/"
+fi
 echo ""
 ```
 
-### Step 2.2: Update GitHub Epic Labels (Optional)
+### Step 3.4: Update GitHub Epic Labels (Optional)
 
 ```bash
 EPIC_ISSUE_NUMBER=$(cat .workflow/outputs/${ARGUMENTS}/github_epic_issue.txt 2>/dev/null)
 
 if [ -n "$EPIC_ISSUE_NUMBER" ]; then
-  echo "📝 Updating epic labels: status:in-progress → status:validation"
+  if [ $VALIDATION_PASSED -eq 1 ]; then
+    echo "📝 Updating epic labels: status:in-progress → status:validated"
 
-  gh issue edit ${EPIC_ISSUE_NUMBER} \
-    --remove-label "status:in-progress" \
-    --add-label "status:validation" 2>&1 > /dev/null
+    gh issue edit ${EPIC_ISSUE_NUMBER} \
+      --remove-label "status:in-progress" \
+      --add-label "status:validated" 2>&1 > /dev/null
 
-  if [ $? -eq 0 ]; then
-    echo "  ✅ Epic labels updated for Phase 2"
+    if [ $? -eq 0 ]; then
+      echo "  ✅ Epic labels updated for Phase 3"
+    fi
+
+    # Post validation success comment
+    gh issue comment ${EPIC_ISSUE_NUMBER} \
+      --body "✅ Validation passed (attempt $VALIDATION_ATTEMPT)
+
+All build, lint, and type checks passed successfully." 2>&1 > /dev/null
+
   else
-    echo "  ⚠️ Failed to update epic labels (non-blocking)"
+    # Post validation failure comment
+    gh issue comment ${EPIC_ISSUE_NUMBER} \
+      --body "⚠️ Validation failed after $VALIDATION_ATTEMPT attempts
+
+The workflow will continue but manual review is recommended.
+
+**Validation logs:**
+- \`.workflow/outputs/${ARGUMENTS}/validation/\`" 2>&1 > /dev/null
   fi
 fi
 ```
@@ -1549,6 +1809,312 @@ echo "Next steps:"
 echo "  1. Review commit: git show"
 echo "  2. Push changes: git push"
 echo "  3. Create pull request (if applicable)"
+echo ""
+echo "======================================================================"
+```
+
+**Proceed to Phase 6 (Post-Mortem)**
+
+---
+
+## PHASE 6: POST-MORTEM
+
+Analyze workflow execution and capture learnings for future improvements.
+
+### Step 6.1: Deploy Post-Mortem Agent
+
+```bash
+echo ""
+echo "📊 Phase 6: Post-Mortem Analysis"
+echo "======================================================================"
+echo ""
+echo "Analyzing workflow execution to identify improvements..."
+echo ""
+```
+
+Use the Task tool to deploy a post-mortem agent.
+
+**Agent Definition Location**: `~/tier1_workflow_global/implementation/agent_definitions/post_mortem_agent_v1.md`
+
+**Agent Prompt Template:**
+
+```markdown
+YOU ARE: Post-Mortem Agent V1
+
+[Read ~/tier1_workflow_global/implementation/agent_definitions/post_mortem_agent_v1.md]
+
+---
+
+EPIC INFORMATION:
+
+Epic ID: ${ARGUMENTS}
+Epic Title: ${EPIC_TITLE}
+Execution Mode: ${EXECUTION_MODE}
+$(if [ "$EXECUTION_MODE" = "parallel" ]; then
+  echo "Parallel Domains: $(echo "${ORDERED_DOMAINS[@]}" | tr ' ' ', ')"
+fi)
+
+---
+
+WORKFLOW ARTIFACTS:
+
+**Phase 0 - Preflight:**
+$(if [ "$EXECUTION_MODE" = "parallel" ]; then
+  cat .workflow/outputs/${ARGUMENTS}/parallel_analysis.json
+fi)
+
+**Phase 1 - Implementation:**
+$(if [ "$EXECUTION_MODE" = "parallel" ]; then
+  echo "Parallel Results:"
+  cat .workflow/outputs/${ARGUMENTS}/phase1_parallel_results.json
+  echo ""
+  echo "Merge Summary:"
+  cat .workflow/outputs/${ARGUMENTS}/merge_summary.json
+else
+  cat .workflow/outputs/${ARGUMENTS}/phase1_results.json
+fi)
+
+**Phase 2 - Validation:**
+- Build/lint/type checks (review git history for validation results)
+- Fix attempts (if any): check .workflow/outputs/${ARGUMENTS}/fix_attempt_*.json
+
+**Phase 5 - Commit:**
+- Final commit: $(git rev-parse --short HEAD)
+- Files changed: $(git diff HEAD~1 --stat | tail -1)
+
+---
+
+EPIC SPECIFICATION:
+
+[Read ${EPIC_DIR}/spec.md]
+
+---
+
+ARCHITECTURE DESIGN:
+
+[Read ${EPIC_DIR}/architecture.md]
+
+---
+
+PRESCRIPTIVE PLAN:
+
+[Read ${EPIC_DIR}/implementation-details/file-tasks.md]
+
+---
+
+GIT CHANGES:
+
+Review what was actually changed:
+\`\`\`bash
+git diff HEAD~1 --stat
+git diff HEAD~1
+\`\`\`
+
+---
+
+YOUR TASK:
+
+1. Review all workflow artifacts above
+2. Analyze git changes
+3. Answer the 4 post-mortem questions:
+   - What worked well?
+   - What challenges occurred?
+   - How were challenges resolved?
+   - What should improve next time?
+4. Provide specific, actionable recommendations
+5. Write structured markdown report
+
+---
+
+OUTPUT FILE:
+
+Write your post-mortem report to:
+.workflow/post-mortem/${ARGUMENTS}.md
+
+Use the exact format specified in the post-mortem agent definition.
+
+Include:
+- Summary (1-2 sentences)
+- Execution details (files, mode, duration, status)
+- What worked well (3-5 specific items)
+- Challenges encountered (2-4 with resolutions)
+- Recommendations (briefing updates, process improvements, patterns)
+- Metrics (validation pass rate, file overlap, errors fixed)
+- Artifacts (links to results files)
+
+$(if [ "$EXECUTION_MODE" = "parallel" ]; then
+  echo "PARALLEL EXECUTION - Also analyze:"
+  echo "- Worktree management effectiveness"
+  echo "- Parallel speedup vs expected"
+  echo "- Domain separation quality"
+  echo "- Merge process smoothness"
+  echo "- Worktree cleanup verification"
+fi)
+
+---
+
+BEGIN POST-MORTEM ANALYSIS.
+
+Be specific. Provide file names, line numbers, concrete examples. Make recommendations actionable with exact file paths and suggested changes.
+
+WHEN COMPLETE: Write report to .workflow/post-mortem/${ARGUMENTS}.md
+```
+
+**Deploy the agent using Task tool:**
+
+```python
+Task(
+    subagent_type="general-purpose",
+    description=f"Post-mortem analysis for {ARGUMENTS}",
+    prompt="""
+    [Complete agent prompt from template above]
+    """
+)
+```
+
+### Step 6.2: Read and Display Post-Mortem Report
+
+After agent completes, read and display the report:
+
+```bash
+echo ""
+echo "📊 Reading post-mortem report..."
+echo ""
+
+if [ -f ".workflow/post-mortem/${ARGUMENTS}.md" ]; then
+  # Display summary section
+  echo "======================================================================"
+  echo "Post-Mortem Summary"
+  echo "======================================================================"
+  sed -n '/^## Summary/,/^## /p' .workflow/post-mortem/${ARGUMENTS}.md | head -n -1
+  echo ""
+
+  # Display recommendations section
+  echo "======================================================================"
+  echo "Key Recommendations"
+  echo "======================================================================"
+  sed -n '/^## Recommendations/,/^## /p' .workflow/post-mortem/${ARGUMENTS}.md | head -n -1
+  echo ""
+
+  echo "✅ Full report available at:"
+  echo "   .workflow/post-mortem/${ARGUMENTS}.md"
+  echo ""
+else
+  echo "⚠️ Post-mortem report not found"
+  echo "   Expected: .workflow/post-mortem/${ARGUMENTS}.md"
+  echo ""
+fi
+```
+
+### Step 6.3: Knowledge Capture Guidance
+
+```bash
+echo ""
+echo "📚 Knowledge Capture"
+echo "======================================================================"
+echo ""
+echo "Post-mortem report contains recommendations for:"
+echo ""
+echo "1. Agent Briefing Updates"
+echo "   - Review suggested additions to:"
+echo "     - .claude/agent_briefings/backend_implementation.md"
+echo "     - .claude/agent_briefings/frontend_implementation.md"
+echo "     - etc."
+echo ""
+echo "2. Process Improvements"
+echo "   - Review suggested workflow changes"
+echo "   - Consider updating execute-workflow.md if needed"
+echo ""
+echo "3. Pattern Additions"
+echo "   - Review new patterns discovered"
+echo "   - Consider adding to project patterns or semantic library"
+echo ""
+echo "Human review required - post-mortem suggests, you decide what to apply."
+echo ""
+```
+
+### Step 6.4: Briefing Update Workflow
+
+```bash
+echo "📝 Briefing Update Workflow"
+echo "======================================================================"
+echo ""
+echo "To apply recommendations:"
+echo ""
+echo "1. Read full post-mortem report:"
+echo "   cat .workflow/post-mortem/${ARGUMENTS}.md"
+echo ""
+echo "2. Review 'Briefing Updates' section"
+echo ""
+echo "3. For each suggested update:"
+echo "   - Evaluate if it's generally applicable (not epic-specific)"
+echo "   - Edit the referenced briefing file"
+echo "   - Add pattern, example, or clarification"
+echo ""
+echo "4. Commit briefing updates separately:"
+echo "   git add .claude/agent_briefings/"
+echo "   git commit -m \"refine: update agent briefings based on ${ARGUMENTS} post-mortem\""
+echo ""
+echo "5. Archive post-mortem for future reference:"
+echo "   # Already saved in .workflow/post-mortem/${ARGUMENTS}.md"
+echo ""
+```
+
+### Step 6.5: Complete Phase 6
+
+```bash
+echo ""
+echo "======================================================================"
+echo "✅ Phase 6 Complete: Post-Mortem Analysis"
+echo "======================================================================"
+echo ""
+echo "Post-Mortem Report: .workflow/post-mortem/${ARGUMENTS}.md"
+echo ""
+echo "Next Steps:"
+echo "  1. Review post-mortem report in detail"
+echo "  2. Apply valuable recommendations to agent briefings"
+echo "  3. Update workflow processes if needed"
+echo "  4. Keep post-mortem for historical reference"
+echo ""
+echo "======================================================================"
+echo ""
+```
+
+---
+
+## COMPLETION SUMMARY
+
+```bash
+echo ""
+echo "======================================================================"
+echo "✅ Workflow Complete: ${ARGUMENTS}"
+echo "======================================================================"
+echo ""
+echo "Execution mode: ${EXECUTION_MODE}"
+echo "Epic: ${EPIC_TITLE}"
+echo "Files created: ${TOTAL_FILES_CREATED}"
+echo "Files modified: ${TOTAL_FILES_MODIFIED}"
+echo ""
+echo "Results:"
+echo "  - Implementation: .workflow/outputs/${ARGUMENTS}/"
+echo "  - Post-Mortem: .workflow/post-mortem/${ARGUMENTS}.md"
+echo "  - Epic moved to: .tasks/completed/$(basename $EPIC_DIR)"
+echo ""
+echo "Git:"
+echo "  - Commit created: $(git rev-parse --short HEAD)"
+echo "  - Branch: $(git branch --show-current)"
+echo ""
+echo "Knowledge Capture:"
+echo "  - Review post-mortem recommendations"
+echo "  - Update agent briefings as appropriate"
+echo "  - Apply process improvements"
+echo ""
+echo "Next steps:"
+echo "  1. Review commit: git show"
+echo "  2. Review post-mortem: cat .workflow/post-mortem/${ARGUMENTS}.md"
+echo "  3. Apply recommendations: edit .claude/agent_briefings/*.md"
+echo "  4. Push changes: git push"
+echo "  5. Create pull request (if applicable)"
 echo ""
 echo "======================================================================"
 ```

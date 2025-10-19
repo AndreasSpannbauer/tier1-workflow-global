@@ -330,6 +330,93 @@ cat .tasks/*/EPIC-XXX/implementation-details/file-tasks.md
 - Clearer briefing examples
 - More explicit error handling patterns
 
+### Parallel Execution Analysis (if applicable)
+
+When analyzing parallel execution, examine:
+
+**Worktree Management:**
+- Were worktrees created successfully for all domains?
+- Did agents work in correct isolated directories?
+- Was worktree cleanup successful after merge?
+- Any worktree metadata issues?
+
+**Parallel Effectiveness:**
+- Actual speedup vs expected speedup
+- Were domains truly independent (no shared files)?
+- Did parallel detection make the right call?
+- Would sequential have been faster due to overhead?
+
+**Merge Process:**
+- Were merge conflicts predicted accurately?
+- Did dependency-based merge order work correctly?
+- Any unexpected conflicts during merge?
+- How long did sequential merge take?
+
+**Domain Separation:**
+- Was file overlap percentage accurate (<30%)?
+- Were domain boundaries clear and logical?
+- Should any files have been in different domains?
+- Were shared dependencies handled properly?
+
+## Validation Analysis (Phase 2)
+
+Review validation results and fix attempts:
+
+**Questions to Answer:**
+- Did validation pass on first attempt?
+- How many fix attempts were required? (max 3)
+- What types of errors occurred? (build, lint, type, architecture)
+- Were fixer agents effective?
+- Should validation gates be stricter or more lenient?
+
+**Common Validation Issues:**
+- Build errors (syntax, imports, missing dependencies)
+- Lint violations (formatting, import order, unused variables)
+- Type errors (missing annotations, incorrect types)
+- Architecture violations (layer boundaries, dependency rules)
+
+**Validation Metrics:**
+```json
+{
+  "validation_pass_rate": "X% (attempt Y/3)",
+  "build_errors": X,
+  "lint_violations": Y,
+  "type_errors": Z,
+  "architecture_violations": W,
+  "auto_fixable_issues": A,
+  "manual_fixes_required": B
+}
+```
+
+## Worktree Cleanup Verification (Parallel Only)
+
+If parallel execution was used, verify cleanup:
+
+**Checklist:**
+- [ ] All worktrees removed from `.worktrees/` directory
+- [ ] Git worktree list shows no orphaned worktrees
+- [ ] Feature branches deleted after merge (if configured)
+- [ ] Worktree metadata archived correctly
+- [ ] No leftover worktree locks or git references
+
+**Cleanup Commands to Verify:**
+```bash
+# Check for remaining worktrees
+git worktree list
+
+# Check worktree directory
+ls .worktrees/
+
+# Verify metadata archived
+ls .worktrees/.metadata/archived/
+```
+
+**If cleanup failed:**
+- Document which worktrees remain
+- Note any error messages
+- Recommend manual cleanup steps
+- Suggest improvements to cleanup logic
+
 ## Final Checklist
 
 Before writing report:
@@ -342,5 +429,23 @@ Before writing report:
 - [ ] Process improvements suggested
 - [ ] Metrics calculated
 - [ ] Artifacts referenced
+- [ ] Parallel execution analyzed (if applicable)
+- [ ] Validation issues documented
+- [ ] Worktree cleanup verified (if parallel)
 
 DO NOT write generic feedback. Be specific, actionable, and focused on continuous improvement.
+
+## Tier 1 Simplifications (vs V6)
+
+This is a **single-agent post-mortem** (not 3-agent analysis like V6):
+- No automated semantic indexing (manual knowledge capture)
+- No implementation/validation/planning agent split
+- Simpler knowledge capture (human reviews and applies suggestions)
+- Markdown reports only (no complex data structures)
+- Briefing evolution is manual (post-mortem suggests, human updates)
+
+**Focus on:**
+- What worked, what didn't, what to improve
+- Concrete, actionable recommendations
+- Helping humans evolve the workflow incrementally
+- Learning from both successes and failures
