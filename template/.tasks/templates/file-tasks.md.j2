@@ -1,0 +1,246 @@
+# {{ epic_id }}: File-by-File Implementation Plan
+
+## Overview
+
+This is the **prescriptive implementation plan** for {{ title }}. Each section specifies exactly what code to write, where, and how.
+
+**Execution Mode:** Sequential or Parallel (analyze file scopes to determine)
+
+**Total Files:** N files to create/modify
+
+**Estimated Time:** X hours/days implementation
+
+---
+
+## Implementation Order
+
+```
+Phase 1: [Component Name] (estimated time)
+  1. path/to/file1.ext
+  2. path/to/file2.ext
+
+Phase 2: [Component Name] (estimated time)
+  3. path/to/file3.ext
+  4. path/to/file4.ext
+
+Phase 3: [Component Name] (estimated time)
+  5. path/to/file5.ext
+  6. path/to/file6.ext
+```
+
+---
+
+# PHASE 1: [Component Group Name]
+
+## File 1: `path/to/file1.ext`
+
+**Purpose:** [Clear one-sentence description of what this file does]
+
+**What to implement:**
+
+[Provide prescriptive code structure - show the skeleton with key classes/functions]
+
+Example for Python:
+```python
+"""
+Module docstring explaining the purpose and responsibility.
+"""
+
+from typing import List, Dict, Optional
+import dependencies
+
+# Constants or configuration
+CONSTANT_NAME = "value"
+
+
+class ClassName:
+    """
+    Class description: what it represents and what it does.
+
+    Attributes:
+        attr1: Description of attribute
+        attr2: Description of attribute
+    """
+
+    def __init__(self, param1: Type1, param2: Type2):
+        """
+        Initialize the class.
+
+        Args:
+            param1: Description of parameter
+            param2: Description of parameter
+        """
+        self.attr1 = param1
+        self.attr2 = param2
+        self._private_attr = None
+
+    def public_method(self, arg: ArgType) -> ReturnType:
+        """
+        Description of what this method does.
+
+        Args:
+            arg: Description of argument
+
+        Returns:
+            Description of return value
+
+        Raises:
+            ExceptionType: When does this exception occur
+        """
+        # Implementation steps:
+        # 1. Validate inputs
+        # 2. Process data
+        # 3. Handle errors
+        # 4. Return result
+        pass
+
+    def _private_helper(self, data: DataType) -> ProcessedType:
+        """Helper method for internal use."""
+        pass
+
+
+def helper_function(param: ParamType) -> ResultType:
+    """
+    Standalone function description.
+
+    Args:
+        param: Description
+
+    Returns:
+        Description
+    """
+    pass
+```
+
+Example for TypeScript:
+```typescript
+/**
+ * Module description
+ */
+
+import { Type1, Type2 } from './types';
+
+// Constants
+export const CONSTANT_NAME = 'value';
+
+/**
+ * Interface or type definition
+ */
+export interface InterfaceName {
+  field1: string;
+  field2: number;
+  optionalField?: boolean;
+}
+
+/**
+ * Class description
+ */
+export class ClassName {
+  private attr1: Type1;
+  private attr2: Type2;
+
+  constructor(param1: Type1, param2: Type2) {
+    this.attr1 = param1;
+    this.attr2 = param2;
+  }
+
+  public async publicMethod(arg: ArgType): Promise<ReturnType> {
+    // Implementation steps:
+    // 1. Validate inputs
+    // 2. Process data
+    // 3. Handle errors
+    // 4. Return result
+  }
+
+  private helperMethod(data: DataType): ProcessedType {
+    // Helper logic
+  }
+}
+
+/**
+ * Standalone function
+ */
+export function helperFunction(param: ParamType): ResultType {
+  // Implementation
+}
+```
+
+**Dependencies:**
+- What files must exist before this one (e.g., base classes, types, interfaces)
+- What external libraries are required (e.g., numpy, react, express)
+- What configuration files are needed (e.g., tsconfig.json, package.json)
+
+**Testing:**
+- Unit test requirements: Test ClassName initialization, test publicMethod with valid/invalid inputs
+- Integration test scenarios: Test interaction with other components
+- Edge cases to cover: null inputs, empty arrays, boundary values
+- Mock requirements: What external dependencies need mocking
+
+**Implementation Notes:**
+- Key architectural decisions from architecture.md (e.g., "Uses repository pattern")
+- Performance considerations (e.g., "Cache results for 5 minutes")
+- Error handling strategies (e.g., "Throw ValidationError for invalid inputs")
+- Security considerations (e.g., "Sanitize user input before processing")
+
+---
+
+## File 2: `path/to/file2.ext`
+
+**Purpose:** [Description]
+
+**What to implement:**
+[Prescriptive code structure]
+
+**Dependencies:** [List]
+
+**Testing:** [Requirements]
+
+**Implementation Notes:** [Key decisions]
+
+---
+
+[Repeat for each file in the phase]
+
+---
+
+# PHASE 2: [Next Component Group]
+
+[Repeat structure for each phase]
+
+---
+
+# Summary
+
+**Files Created:** N
+**Files Modified:** M
+
+**Dependencies Installation:**
+```bash
+# Python example
+pip install library1>=1.0 library2>=2.0
+
+# Node.js example
+npm install library1 library2
+```
+
+**Validation Criteria:**
+- [ ] All files created/modified successfully
+- [ ] No import errors (Python) / compilation errors (TypeScript)
+- [ ] Unit tests passing (≥80% coverage target)
+- [ ] Integration tests passing
+- [ ] No linting errors (ruff/eslint)
+- [ ] No type errors (mypy/tsc)
+- [ ] Performance targets met (<X seconds for Y operation)
+- [ ] Security scan passing (no vulnerabilities)
+
+**Execution Order:**
+1. Create files in Phase 1 order
+2. Run tests after each file
+3. Fix any errors before proceeding
+4. Create files in Phase 2 order
+5. Run integration tests
+6. Validate complete system
+
+**Ready for /execute-workflow {{ epic_id }}**
+
+This prescriptive plan can now be executed by implementation agents sequentially or in parallel (depending on execution mode detected).

@@ -331,6 +331,66 @@ async def search_emails(query: str) -> list:  # Should be list[Email]
 - Use `list[T]`, `dict[K, V]` for collections
 - Use `Any` sparingly (only when truly dynamic)
 
+### Module-Level Type Annotations
+
+**CRITICAL for mypy strict mode:** Module-level variables (especially empty collections) MUST have explicit type annotations.
+
+**Pattern:**
+
+When declaring module-level collections, lists, or dictionaries that start empty:
+- Always provide explicit type annotations
+- Use the format: `var_name: CollectionType[ElementType] = initial_value`
+
+**✅ CORRECT Examples:**
+
+```python
+# Module-level lists
+trace_plots: list[str] = []
+figure_paths: list[Path] = []
+analysis_results: list[dict[str, Any]] = []
+
+# Module-level dictionaries
+config_cache: dict[str, Any] = {}
+data_store: dict[str, pd.DataFrame] = {}
+
+# Module-level optional values
+current_analysis: Optional[AnalysisResult] = None
+```
+
+**❌ WRONG Examples:**
+
+```python
+# ❌ Missing type annotation - mypy error: "Need type annotation for 'trace_plots'"
+trace_plots = []
+
+# ❌ Incomplete type annotation - mypy error: list of what?
+figure_paths: list = []
+
+# ❌ Too vague - dict of what to what?
+config_cache: dict = {}
+```
+
+**mypy Error Explanation:**
+
+When mypy sees `trace_plots = []`, it cannot infer whether this is:
+- `list[str]`
+- `list[int]`
+- `list[Any]`
+- `list[dict[str, str]]`
+
+**Solution:** Always provide explicit type annotation for empty collections.
+
+**Why it matters:**
+- Enables type checking throughout the module
+- Prevents accidental type violations
+- Self-documenting code (clear what types are expected)
+- Required for mypy strict mode compliance
+
+**When to use:**
+- All module-level variables
+- All class-level attributes (if not initialized in `__init__`)
+- Any empty collection that will be populated later
+
 ## Common Mistakes to Avoid
 
 ### 1. Business Logic in Routes
@@ -426,6 +486,100 @@ async def list_emails(self, user_id: int, limit: int = 10) -> list[Email]:
 
 **Reason:** Implementation phase does NOT write tests. Testing phase handles this (if project requires it).
 
+## 7. Pre-Validation Linting Pattern
+
+**Source:** EPIC-002 post-mortem (clinical-eda-pipeline)
+
+**CRITICAL workflow change:** Always run linting BEFORE validation to prevent validation failures.
+
+### The Problem
+
+**Before this pattern:**
+- Implementation agent writes code → Validation agent runs tests
+- Tests fail due to linting issues (unused imports, f-string formatting)
+- Build fixer agent invoked (unnecessary overhead)
+
+**Root cause:** Linting issues treated as "build failures" when they're really "code quality" issues that should be auto-fixed during implementation.
+
+### The Solution
+
+**New workflow:** Implementation → Auto-lint → Validation
+
+**Pattern:**
+
+After writing code but BEFORE marking task complete:
+
+1. **Run auto-fix linting:**
+   ```bash
+   ruff check --fix .
+   ```
+
+2. **Verify linting passed:**
+   ```bash
+   ruff check .
+   ```
+
+3. **If linting errors remain** (cannot auto-fix):
+   - Fix manually
+   - Re-run `ruff check .`
+   - Repeat until clean
+
+4. **THEN mark task complete** for validation
+
+**Why this works:**
+
+- **Prevents validation failures:** Linting issues fixed before tests run
+- **Reduces build fixer overhead:** No need to invoke build fixer for simple linting
+- **Faster iteration:** Auto-fix handles 90%+ of linting issues automatically
+- **Cleaner git history:** Linting fixes included in initial commit
+
+**Common auto-fixable issues:**
+- F401: Unused imports (removed automatically)
+- F541: f-string without placeholders (f-prefix removed automatically)
+- I001: Import sorting (reordered automatically)
+- UP: Syntax upgrades (e.g., `List[str]` → `list[str]`)
+- W291/W293: Whitespace issues (trimmed automatically)
+
+**Manual fixes required for:**
+- Missing type annotations (e.g., `trace_plots: list[str] = []`)
+- Type hint errors (wrong types, missing generics)
+- Complex refactoring (large functions, duplicate code)
+
+### Integration with Validation Phase
+
+**Validation agent expectations:**
+
+1. **Linting MUST be clean** before validation runs
+2. **If linting fails during validation:**
+   - This is an implementation bug (implementation didn't follow pre-validation pattern)
+   - Validation agent can run `ruff check --fix .` as a courtesy
+   - But this should be RARE (not expected workflow)
+
+**Build fixer agent role:**
+
+Build fixer should NOT be invoked for simple linting issues. Build fixer handles:
+- Test failures (logic errors, incorrect behavior)
+- Type checking failures (complex type inference issues)
+- Integration issues (module compatibility)
+
+**NOT:**
+- Unused imports (implementation should auto-fix)
+- Missing type annotations (implementation should catch)
+- Import sorting (auto-fixable)
+
+**Linting command reference:**
+
+```bash
+# Auto-fix most issues (safe, non-destructive)
+ruff check --fix .
+
+# Verify linting clean (exit code 0 = success)
+ruff check .
+
+# Show specific linting errors (if verification fails)
+ruff check . --output-format=text
+```
+
 ## Post-Implementation Checklist
 
 Before writing results JSON, verify:
@@ -433,13 +587,15 @@ Before writing results JSON, verify:
 - [ ] All business logic in `services/` (not in routes)
 - [ ] All API routes delegate to services
 - [ ] All functions have complete type hints
+- [ ] **Module-level variables have explicit type annotations** ✅ NEW
 - [ ] All database operations use `async`/`await`
 - [ ] Error handling added (custom exceptions + HTTPException in routes)
 - [ ] Database transactions use try/except with rollback
 - [ ] No tests written (per phase rules)
 - [ ] Files match prescriptive plan exactly
-- [ ] Code passes syntax check: `python -m py_compile <file>`
-- [ ] Code passes lint check: `ruff check <file>`
+- [ ] **Code passes auto-fix linting: `ruff check --fix .`** ✅ NEW
+- [ ] **Code passes linting verification: `ruff check .`** ✅ NEW
+- [ ] Code passes syntax check: `python -m py_compile <file>` (if linting passes, this usually does too)
 
 ## Questions to Ask if Unclear
 

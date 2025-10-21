@@ -46,13 +46,92 @@ Check the following files exist and are complete:
 - ✅ `implementation-details/file-tasks.md` - Prescriptive implementation plan
 
 If any files are missing:
-```
-❌ Epic not ready for execution
 
-Missing files:
-- [list missing files]
+```bash
+# Determine which files are missing
+MISSING_FILES=""
+MISSING_SPEC=false
+MISSING_ARCH=false
+MISSING_PLAN=false
 
-Run: /refine-epic ${ARGUMENTS}
+[ ! -f "${EPIC_DIR}/spec.md" ] && MISSING_SPEC=true && MISSING_FILES+="- spec.md (Epic specification)\n"
+[ ! -f "${EPIC_DIR}/architecture.md" ] && MISSING_ARCH=true && MISSING_FILES+="- architecture.md (Architecture design)\n"
+[ ! -f "${EPIC_DIR}/implementation-details/file-tasks.md" ] && MISSING_PLAN=true && MISSING_FILES+="- implementation-details/file-tasks.md (Prescriptive implementation plan)\n"
+
+if [ -n "$MISSING_FILES" ]; then
+  echo ""
+  echo "❌ Epic not ready for execution"
+  echo ""
+  echo "Missing required files:"
+  echo -e "$MISSING_FILES"
+  echo ""
+
+  # Provide specific recovery instructions
+  if [ "$MISSING_PLAN" = true ] && [ "$MISSING_SPEC" = false ] && [ "$MISSING_ARCH" = false ]; then
+    # Only file-tasks.md is missing (common case)
+    echo "═══════════════════════════════════════════════════════════════"
+    echo "RECOVERY: How to generate the missing implementation plan"
+    echo "═══════════════════════════════════════════════════════════════"
+    echo ""
+    echo "The spec and architecture exist, but the prescriptive"
+    echo "implementation plan (file-tasks.md) is missing."
+    echo ""
+    echo "This file contains file-by-file instructions for agents."
+    echo "Without it, agents don't know what to implement."
+    echo ""
+    echo "**Option 1: Use Spec Architect output style (RECOMMENDED)**"
+    echo ""
+    echo "  1. Switch to Spec Architect V6 output style:"
+    echo "     /output-style Spec Architect V6"
+    echo ""
+    echo "  2. Read the existing spec and architecture:"
+    echo "     read ${EPIC_DIR}/spec.md"
+    echo "     read ${EPIC_DIR}/architecture.md"
+    echo ""
+    echo "  3. Ask Claude to generate file-tasks.md:"
+    echo "     \"Please generate the file-tasks.md implementation plan"
+    echo "      for this epic. Use Phase 5.5 from the output style.\""
+    echo ""
+    echo "**Option 2: Use template (MANUAL)**"
+    echo ""
+    echo "  1. Copy template:"
+    echo "     cp .tasks/templates/file-tasks.md.j2 \\"
+    echo "        ${EPIC_DIR}/implementation-details/file-tasks.md"
+    echo ""
+    echo "  2. Fill in the template manually with file-by-file instructions"
+    echo ""
+    echo "**Option 3: Review existing example**"
+    echo ""
+    echo "  See: .tasks/backlog/EPIC-002-*/implementation-details/file-tasks.md"
+    echo "  for a complete 1940-line example of what this file should contain."
+    echo ""
+    echo "═══════════════════════════════════════════════════════════════"
+    echo ""
+
+  elif [ "$MISSING_SPEC" = true ] || [ "$MISSING_ARCH" = true ]; then
+    # Spec or architecture missing (epic not created properly)
+    echo "═══════════════════════════════════════════════════════════════"
+    echo "RECOVERY: Epic specification incomplete"
+    echo "═══════════════════════════════════════════════════════════════"
+    echo ""
+    echo "The epic specification is incomplete or was not created properly."
+    echo ""
+    echo "Run: /spec-epic ${ARGUMENTS}"
+    echo ""
+    echo "This will create:"
+    echo "- spec.md (requirements, scenarios, acceptance criteria)"
+    echo "- architecture.md (system design, components)"
+    echo "- implementation-details/file-tasks.md (implementation plan)"
+    echo ""
+    echo "Make sure to use Spec Architect V6 output style for complete"
+    echo "specification generation including the implementation plan."
+    echo ""
+    echo "═══════════════════════════════════════════════════════════════"
+    echo ""
+  fi
+
+  exit 1
+fi
 ```
 
 ### Step 0.3: Verify Git Working Directory
@@ -205,27 +284,27 @@ echo ""
 
 Use the Task tool to deploy an implementation agent with the complete context.
 
-**Agent Definition Location**: `~/tier1_workflow_global/implementation/agent_definitions/implementation_agent_v1.md`
+**Agent Definition Location**: `.claude/agents/implementation_agent_v1.md`
 
 **Domain Briefing Location** (select appropriate domain based on file-tasks.md):
-- Backend: `~/tier1_workflow_global/implementation/agent_briefings/backend_implementation.md`
-- Frontend: `~/tier1_workflow_global/implementation/agent_briefings/frontend_implementation.md`
-- Database: `~/tier1_workflow_global/implementation/agent_briefings/database_implementation.md`
+- Backend: `.claude/agent_briefings/backend_implementation.md`
+- Frontend: `.claude/agent_briefings/frontend_implementation.md`
+- Database: `.claude/agent_briefings/database_implementation.md`
 
-**Project Architecture**: `~/tier1_workflow_global/implementation/agent_briefings/project_architecture.md`
+**Project Architecture**: `.claude/agent_briefings/project_architecture.md`
 
 **Agent Prompt Template:**
 
 ```markdown
 YOU ARE: Implementation Agent V1
 
-[Read ~/tier1_workflow_global/implementation/agent_definitions/implementation_agent_v1.md]
+[Read .claude/agents/implementation_agent_v1.md]
 
 ---
 
 DOMAIN BRIEFING:
 
-[Read ~/tier1_workflow_global/implementation/agent_briefings/backend_implementation.md]
+[Read .claude/agent_briefings/backend_implementation.md]
 (or appropriate domain briefing)
 
 ---
@@ -327,11 +406,55 @@ echo "Files modified: $FILES_MODIFIED"
 echo ""
 ```
 
-**Proceed to Phase 2 (Validation) if status = "success"**
+**Proceed to Phase 1B (Auto-Lint) if status = "success"**
 
 ---
 
-## PHASE 1B: PARALLEL IMPLEMENTATION
+## PHASE 1B: AUTO-LINT
+
+**Condition:** Runs after implementation (sequential or parallel)
+
+Automatically fix linting issues before validation to prevent build fixer agent invocations.
+
+### Step 1B.1: Run Auto-Lint
+
+```bash
+echo ""
+echo "🔧 Phase 1B: Auto-Lint"
+echo "======================================================================"
+echo ""
+
+# Check if ruff is available
+if command -v ruff &> /dev/null; then
+  echo "Running: ruff check --fix ."
+  ruff check --fix .
+
+  if [ $? -eq 0 ]; then
+    echo "✅ Auto-lint completed (no errors remaining)"
+  else
+    echo "⚠️ Auto-lint completed (some errors may remain)"
+  fi
+else
+  echo "ℹ️ ruff not found - skipping auto-lint"
+fi
+
+echo ""
+```
+
+### Step 1B.2: Update Phase Summary
+
+```bash
+echo "======================================================================"
+echo "✅ Phase 1B Complete: Auto-Lint"
+echo "======================================================================"
+echo ""
+```
+
+**Proceed to Phase 2 (Validation)**
+
+---
+
+## PHASE 1C: PARALLEL IMPLEMENTATION
 
 **Condition:** `EXECUTION_MODE == "parallel"`
 
@@ -681,15 +804,15 @@ Task(
     prompt=f"""
 YOU ARE: Implementation Agent V1
 
-[Read ~/tier1_workflow_global/implementation/agent_definitions/implementation_agent_v1.md]
+[Read .claude/agents/implementation_agent_v1.md]
 
 DOMAIN BRIEFING:
 
-[Read ~/tier1_workflow_global/implementation/agent_briefings/backend_implementation.md]
+[Read .claude/agent_briefings/backend_implementation.md]
 
 PROJECT ARCHITECTURE:
 
-[Read ~/tier1_workflow_global/implementation/agent_briefings/project_architecture.md]
+[Read .claude/agent_briefings/project_architecture.md]
 
 WORKTREE DIRECTORY: {WORKTREE_PATHS[backend]}
 
@@ -1491,7 +1614,7 @@ EOF
       FIXER_PROMPT=$(cat << 'FIXER_EOF'
 YOU ARE: Build Fixer Agent V1
 
-[Read ~/tier1_workflow_global/implementation/agent_definitions/build_fixer_agent_v1.md]
+[Read .claude/agents/build_fixer_agent_v1.md]
 
 ---
 
@@ -1536,7 +1659,7 @@ FIXER_EOF
       echo "⚠️  BUILD FIXER AGENT DEPLOYMENT REQUIRED"
       echo ""
       echo "The orchestrator should deploy a build fixer agent here using Task tool."
-      echo "Agent definition: ~/tier1_workflow_global/implementation/agent_definitions/build_fixer_agent_v1.md"
+      echo "Agent definition: .claude/agents/build_fixer_agent_v1.md"
       echo "Validation log: .workflow/outputs/${ARGUMENTS}/validation/attempt_${VALIDATION_ATTEMPT}.log"
       echo ""
       echo "After agent completes, validation will be retried."
@@ -1834,14 +1957,14 @@ echo ""
 
 Use the Task tool to deploy a post-mortem agent.
 
-**Agent Definition Location**: `~/tier1_workflow_global/implementation/agent_definitions/post_mortem_agent_v1.md`
+**Agent Definition Location**: `.claude/agents/post_mortem_agent_v1.md`
 
 **Agent Prompt Template:**
 
 ```markdown
 YOU ARE: Post-Mortem Agent V1
 
-[Read ~/tier1_workflow_global/implementation/agent_definitions/post_mortem_agent_v1.md]
+[Read .claude/agents/post_mortem_agent_v1.md]
 
 ---
 

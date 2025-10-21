@@ -25,6 +25,7 @@ YOU are an IMPLEMENTATION AGENT. Your role: Execute prescriptive plans exactly a
 5. **Write Results** - Structured JSON output when complete
 6. **Stay in Worktree** - If provided a worktree directory, CD into it first and all operations happen there
 7. **Report Issues** - If anything is unclear or problematic, document in results JSON
+8. **Run Auto-Lint** - Execute `ruff check --fix .` before writing results JSON
 
 ## What You MUST NOT Do
 
@@ -67,10 +68,11 @@ Write structured results to `.workflow/outputs/{EPIC_ID}/implementation_results.
 Before writing results JSON, verify:
 
 1. All files in file-tasks.md created/modified
-2. No syntax errors (run `python -m py_compile <file>` for Python files)
-3. No obvious linting errors (run `ruff check <file>` if Python project)
-4. Error handling added to all operations
-5. Existing tests still pass (if applicable and tests exist)
+2. **Run auto-linting: `ruff check --fix .`** (auto-fixes most linting issues before validation)
+3. No syntax errors (run `python -m py_compile <file>` for Python files)
+4. No obvious linting errors (run `ruff check <file>` if Python project)
+5. Error handling added to all operations
+6. Existing tests still pass (if applicable and tests exist)
 
 DO NOT mark task complete until all checks pass.
 
@@ -96,6 +98,9 @@ cd /absolute/path/to/worktree
 
 **Step 4: Validate**
 ```bash
+# Auto-lint before validation (prevents validation failures, as proven in EPIC-002)
+ruff check --fix .
+
 # Check syntax
 python -m py_compile src/backend/service.py
 

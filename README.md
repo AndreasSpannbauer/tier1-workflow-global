@@ -22,6 +22,85 @@ The Tier 1 workflow is designed for:
 - **Documentation**: Comprehensive assessment and planning documents
 - **Implementation Artifacts**: Tools and utilities for workflow management (in development)
 
+## ⚠️ Critical Requirement: file-tasks.md
+
+**MANDATORY:** Every epic must have `implementation-details/file-tasks.md` before execution.
+
+This file contains:
+- File-by-file implementation instructions
+- Exact code structure for each file
+- Dependencies and execution order
+- Testing requirements
+- Validation criteria
+
+**Without this file, /execute-workflow will fail in Phase 0.**
+
+### How file-tasks.md is Generated
+
+The **Spec Architect V6 output style** (`.claude/output-styles/spec-architect-template.md`) includes **Phase 5.5** which automatically generates this file by:
+
+1. Reading the complete specification (spec.md, architecture.md, contracts/)
+2. Analyzing components, data models, APIs
+3. Breaking down into file-by-file tasks with:
+   - Exact file paths
+   - Prescriptive code structure (classes, functions)
+   - Dependencies between files
+   - Implementation order
+   - Testing requirements
+4. Writing to `implementation-details/file-tasks.md`
+
+**Expected size:** Typically hundreds to thousands of lines (e.g., EPIC-002 has 1940 lines)
+
+### Workflow Stages
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Stage 1: Specification (/spec-epic)                             │
+├─────────────────────────────────────────────────────────────────┤
+│ Uses: Spec Architect V6 output style                            │
+│ Creates:                                                         │
+│ - spec.md (requirements, scenarios, acceptance criteria)        │
+│ - architecture.md (system design, components, data flow)        │
+│ - contracts/*.yaml (YAML data contracts)                        │
+│ - implementation-details/file-tasks.md (REQUIRED)               │ ← Phase 5.5
+└─────────────────────────────────────────────────────────────────┘
+                                ↓
+┌─────────────────────────────────────────────────────────────────┐
+│ Stage 2: Execution (/execute-workflow)                          │
+├─────────────────────────────────────────────────────────────────┤
+│ Phase 0: Preflight - Validates file-tasks.md exists            │
+│ Phase 1: Implementation - Deploys agents with prescriptive plan │
+│ Phase 2: Validation - Runs tests, linters, type checks         │
+│ Phase 3: Commit & Cleanup - Creates commit, moves to completed  │
+│ Phase 4: Post-Mortem - Analyzes workflow, generates learnings   │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Validation & Error Handling
+
+**Built-in Safeguards:**
+
+1. **Spec Architect Phase 5.5** - Generates file-tasks.md automatically
+2. **/spec-epic validation** - Warns if file-tasks.md is missing or too small (<50 lines)
+3. **/execute-workflow Phase 0** - Blocks execution with actionable error messages if missing
+
+**If file-tasks.md is missing:**
+- /spec-epic will show: ⚠️  WARNING: Implementation plan missing
+- /execute-workflow will show: ❌ Epic not ready for execution
+- Both provide recovery instructions
+
+### Template Reference
+
+**Location:** `.tasks/templates/file-tasks.md.j2`
+
+This template shows the expected structure and detail level for prescriptive implementation plans.
+
+**Key sections:**
+- Overview (execution mode, file count, time estimates)
+- Implementation order (phased grouping)
+- File-by-file breakdown (purpose, code structure, dependencies, testing)
+- Summary (validation criteria, installation commands)
+
 ## Directory Structure
 
 ```
@@ -36,7 +115,7 @@ tier1_workflow_global/
 │   ├── .tasks/                        # Task management structure
 │   └── tools/                         # Workflow tools and scripts
 └── implementation/                    # Implementation artifacts
-    ├── agent_definitions/             # Agent definition files (complete)
+    ├── agents/                        # Agent definition files (complete)
     ├── agent_briefings/               # Domain briefing files (complete)
     ├── worktree_manager/              # Worktree manager code (complete)
     ├── validation_scripts/            # Validation templates (Week 4)

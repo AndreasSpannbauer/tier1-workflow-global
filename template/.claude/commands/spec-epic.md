@@ -1,7 +1,7 @@
 ---
 description: "Create epic with interactive spec refinement and GitHub issue"
 argument-hint: "<title>"
-allowed-tools: [Write, Read, Bash, AskUserQuestion]
+allowed-tools: [Write, Read, Bash]
 ---
 
 ## Epic Spec Creation
@@ -17,15 +17,29 @@ If style not available, continue with default style.
 
 ## Round 1: Problem Understanding
 
-Use AskUserQuestion to gather problem context. Ask these 4 questions in a single batch:
+Ask these 4 questions using plain text format:
 
-**Question 1 (Header: "Pain Point"):** What user pain point does this solve?
+```markdown
+**Round 1: Problem Understanding (4 questions)**
 
-**Question 2 (Header: "Workaround"):** What is the current manual workaround?
+Please provide your answers below each question:
 
-**Question 3 (Header: "Desired"):** What is the desired automated behavior?
+**1. Pain Point:** What user pain point does this solve?
 
-**Question 4 (Header: "Impact"):** What is the expected impact? (users affected, time saved, business value)
+**Your answer:**
+
+**2. Workaround:** What is the current manual workaround?
+
+**Your answer:**
+
+**3. Desired:** What is the desired automated behavior?
+
+**Your answer:**
+
+**4. Impact:** What is the expected impact? (users affected, time saved, business value)
+
+**Your answer:**
+```
 
 [Wait for user responses - store answers as: pain_point, current_workaround, desired_behavior, expected_impact]
 
@@ -33,17 +47,33 @@ Use AskUserQuestion to gather problem context. Ask these 4 questions in a single
 
 ## Round 2: Scope Definition
 
-Based on Round 1 answers, ask these 5 questions in a single batch:
+Based on Round 1 answers, ask these 5 questions using plain text:
 
-**Question 5 (Header: "Integrations"):** Which existing components will this integrate with?
+```markdown
+**Round 2: Scope Definition (5 questions)**
 
-**Question 6 (Header: "New Components"):** What new components are needed?
+Please provide your answers below each question:
 
-**Question 7 (Header: "Data Sources"):** What data sources are involved? (databases, APIs, files, etc.)
+**5. Integrations:** Which existing components will this integrate with?
 
-**Question 8 (Header: "Edge Cases"):** What are the edge cases to consider?
+**Your answer:**
 
-**Question 9 (Header: "Non-Goals"):** What are the non-goals? (explicitly out of scope)
+**6. New Components:** What new components are needed?
+
+**Your answer:**
+
+**7. Data Sources:** What data sources are involved? (databases, APIs, files, etc.)
+
+**Your answer:**
+
+**8. Edge Cases:** What are the edge cases to consider?
+
+**Your answer:**
+
+**9. Non-Goals:** What are the non-goals? (explicitly out of scope)
+
+**Your answer:**
+```
 
 [Wait for user responses - store answers as: existing_components, new_components, data_sources, edge_cases, non_goals]
 
@@ -51,13 +81,25 @@ Based on Round 1 answers, ask these 5 questions in a single batch:
 
 ## Round 3: Technical Constraints
 
-Ask these 3 questions in a single batch:
+Ask these 3 questions using plain text:
 
-**Question 10 (Header: "Performance"):** What are the performance requirements? (latency, throughput, scale)
+```markdown
+**Round 3: Technical Constraints (3 questions)**
 
-**Question 11 (Header: "Security"):** What are the security considerations? (auth, data protection, compliance)
+Please provide your answers below each question:
 
-**Question 12 (Header: "Compatibility"):** What are compatibility constraints? (browsers, platforms, APIs, dependencies)
+**10. Performance:** What are the performance requirements? (latency, throughput, scale)
+
+**Your answer:**
+
+**11. Security:** What are the security considerations? (auth, data protection, compliance)
+
+**Your answer:**
+
+**12. Compatibility:** What are compatibility constraints? (browsers, platforms, APIs, dependencies)
+
+**Your answer:**
+```
 
 [Wait for user responses - store answers as: performance_requirements, security_considerations, compatibility_constraints]
 
@@ -251,6 +293,65 @@ PYTHON_EOF
 
 ---
 
+## Validation Check
+
+**CRITICAL:** Verify the Spec Architect output style generated the implementation plan.
+
+```bash
+echo ""
+echo "Validating epic completeness..."
+echo "----------------------------------------------------------------------"
+
+# Check if file-tasks.md was created
+if [ ! -f "${EPIC_DIR}/implementation-details/file-tasks.md" ]; then
+  echo ""
+  echo "⚠️  WARNING: Implementation plan missing"
+  echo ""
+  echo "   Required file not found:"
+  echo "   ${EPIC_DIR}/implementation-details/file-tasks.md"
+  echo ""
+  echo "   This file contains the prescriptive implementation plan"
+  echo "   that agents need to execute the epic."
+  echo ""
+  echo "   Cause: The Spec Architect output style should have generated"
+  echo "   this file automatically in Phase 5.5."
+  echo ""
+  echo "   Solutions:"
+  echo "   1. Use Spec Architect output style: /output-style Spec Architect V6"
+  echo "   2. Manually create file-tasks.md using the template:"
+  echo "      .tasks/templates/file-tasks.md.j2"
+  echo "   3. Or use /generate-implementation-plan ${EPIC_ID} (if available)"
+  echo ""
+  echo "   ❌ Epic is INCOMPLETE without this file."
+  echo "   ❌ /execute-workflow will FAIL if you proceed."
+  echo ""
+else
+  # file-tasks.md exists - verify it's not empty
+  FILE_SIZE=$(wc -l < "${EPIC_DIR}/implementation-details/file-tasks.md")
+
+  if [ "$FILE_SIZE" -lt 50 ]; then
+    echo ""
+    echo "⚠️  WARNING: Implementation plan seems incomplete"
+    echo ""
+    echo "   ${EPIC_DIR}/implementation-details/file-tasks.md"
+    echo "   only has $FILE_SIZE lines (expected >50 for a real plan)"
+    echo ""
+    echo "   Review the file to ensure it contains:"
+    echo "   - File-by-file implementation instructions"
+    echo "   - Exact code to write for each file"
+    echo "   - Dependencies and testing requirements"
+    echo ""
+  else
+    echo "✅ Implementation plan verified:"
+    echo "   ${EPIC_DIR}/implementation-details/file-tasks.md ($FILE_SIZE lines)"
+  fi
+fi
+
+echo ""
+```
+
+---
+
 ## Display Completion
 
 ```
@@ -286,7 +387,7 @@ Pro tips:
 ## Implementation Notes
 
 **Variable Storage:**
-After each AskUserQuestion round, store the user's answers in bash variables or Python variables for template substitution.
+After each question round (using plain text questions), store the user's answers in bash variables or Python variables for template substitution.
 
 **Template Substitution:**
 Use bash `sed` for simple replacements:

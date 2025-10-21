@@ -367,6 +367,8 @@ install_directory_structure() {
     local dirs=(
         ".claude/commands"
         ".claude/output-styles"
+        ".claude/agents"
+        ".claude/agent_briefings"
         ".tasks/backlog"
         ".tasks/current"
         ".tasks/completed"
@@ -412,6 +414,36 @@ install_claude_config() {
     fi
 
     log SUCCESS "Claude Code configuration installed"
+}
+
+install_agents() {
+    log STEP "Installing agent definitions and briefings..."
+
+    # Create agent directories
+    mkdir -p "${PROJECT_DIR}/.claude/agents"
+    mkdir -p "${PROJECT_DIR}/.claude/agent_briefings"
+
+    # Copy agent definitions from implementation/agents to .claude/agents
+    if [[ -d "${IMPL_DIR}/agents" ]]; then
+        for file in "${IMPL_DIR}/agents"/*.md; do
+            [[ -f "${file}" ]] || continue
+            local filename=$(basename "${file}")
+            copy_with_substitution "${file}" "${PROJECT_DIR}/.claude/agents/${filename}"
+            log INFO "Installed agent: ${filename}"
+        done
+    fi
+
+    # Copy agent briefings from implementation/agent_briefings to .claude/agent_briefings
+    if [[ -d "${IMPL_DIR}/agent_briefings" ]]; then
+        for file in "${IMPL_DIR}/agent_briefings"/*.md; do
+            [[ -f "${file}" ]] || continue
+            local filename=$(basename "${file}")
+            copy_with_substitution "${file}" "${PROJECT_DIR}/.claude/agent_briefings/${filename}"
+            log INFO "Installed briefing: ${filename}"
+        done
+    fi
+
+    log SUCCESS "Agents and briefings installed"
 }
 
 install_task_templates() {
@@ -905,6 +937,7 @@ main() {
     # Install components
     install_directory_structure
     install_claude_config
+    install_agents
     install_task_templates
     install_validation_scripts
     install_github_integration

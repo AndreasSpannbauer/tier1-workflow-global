@@ -19,7 +19,9 @@ The Master Spec sits above all implementation details. It defines:
 
 ## Process: Interactive Refinement
 
-This is a **guided conversation**, not a script. I'll ask you clarifying questions to create a clear, actionable master specification.
+This is a **guided conversation**, not a script. I'll ask you clarifying questions using **plain text format** (no UI tools) to create a clear, actionable master specification.
+
+**Question Format:** I'll present questions with multiple-choice options or open-ended prompts. Simply type your answers directly in the chat.
 
 ### Phase 1: Product Vision (WHY THIS EXISTS)
 
