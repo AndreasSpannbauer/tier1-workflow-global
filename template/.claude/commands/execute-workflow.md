@@ -29,15 +29,93 @@ Check: .tasks/backlog/${ARGUMENTS}-*/
 Run: /task-list to view available epics
 ```
 
-### Step 0.2: Verify Required Files
+### Step 0.2: Verify Required Files (Two-Phase Validation)
 
-Check the following files exist and are complete:
+**CRITICAL:** This uses the canonical two-phase validation pattern from ADR-012.
+
+Phase 1 checks file existence. Phase 2 checks for template placeholders.
 
 ```bash
 # Required files
-[ -f "${EPIC_DIR}/spec.md" ] || echo "MISSING: spec.md"
-[ -f "${EPIC_DIR}/architecture.md" ] || echo "MISSING: architecture.md"
-[ -f "${EPIC_DIR}/implementation-details/file-tasks.md" ] || echo "MISSING: file-tasks.md"
+REQUIRED_FILES=(
+  "spec.md"
+  "architecture.md"
+  "implementation-details/file-tasks.md"
+)
+
+# Template markers that indicate incomplete specifications (18 markers from ADR-012)
+TEMPLATE_MARKERS=(
+  # User scenario templates
+  "[What happens now]"
+  "[What should happen]"
+  "[How we measure success]"
+  # Architecture templates
+  "[Component Name]"
+  "[System diagram here"
+  "[Brief description]"
+  # Requirements templates
+  "[Criterion 1]"
+  "[Criterion 2]"
+  # Database/API templates
+  "[table_name]"
+  "[METHOD] /api/"
+  # Performance templates
+  "[Performance targets]"
+  "[Accuracy targets]"
+  # Dependency templates
+  "[Feature deliberately excluded]"
+  "[Epic/feature this depends on]"
+  "[Epic/feature that depends on]"
+  # Generic incomplete markers
+  "_To be defined"
+  "_To be determined"
+  "_Description to be added_"
+)
+
+# Phase 1: Check file existence
+MISSING_FILES=""
+FILES_WITH_TEMPLATES=""
+
+for FILE in "${REQUIRED_FILES[@]}"; do
+  if [ ! -f "${EPIC_DIR}/${FILE}" ]; then
+    MISSING_FILES+="- ${FILE}\n"
+  else
+    # Phase 2: Check for template placeholders
+    FILE_HAS_TEMPLATES=false
+    for MARKER in "${TEMPLATE_MARKERS[@]}"; do
+      if grep -q "${MARKER}" "${EPIC_DIR}/${FILE}"; then
+        FILE_HAS_TEMPLATES=true
+        break
+      fi
+    done
+
+    if [ "$FILE_HAS_TEMPLATES" = true ]; then
+      FILES_WITH_TEMPLATES+="- ${FILE} (contains template placeholders)\n"
+    fi
+  fi
+done
+
+# Report issues if any
+if [ -n "$MISSING_FILES" ] || [ -n "$FILES_WITH_TEMPLATES" ]; then
+  echo ""
+  echo "❌ Epic not ready for execution"
+  echo ""
+
+  if [ -n "$MISSING_FILES" ]; then
+    echo "Missing required files:"
+    echo -e "$MISSING_FILES"
+    echo ""
+  fi
+
+  if [ -n "$FILES_WITH_TEMPLATES" ]; then
+    echo "Files containing template placeholders (incomplete):"
+    echo -e "$FILES_WITH_TEMPLATES"
+    echo ""
+    echo "These files exist but contain unfilled template markers."
+    echo "Complete the specification before running the workflow."
+    echo ""
+  fi
+fi
 ```
 
 **Expected files:**
@@ -45,29 +123,27 @@ Check the following files exist and are complete:
 - ✅ `architecture.md` - Architecture decisions and design
 - ✅ `implementation-details/file-tasks.md` - Prescriptive implementation plan
 
-If any files are missing:
+**Validation Pattern (ADR-012):**
+- ✅ Phase 1: File existence checked
+- ✅ Phase 2: Template placeholder detection (18 markers)
+- ✅ Prevents false "ready for execution" with incomplete specs
+
+If any files are missing or contain templates:
 
 ```bash
-# Determine which files are missing
-MISSING_FILES=""
+# Determine which specific files are missing for recovery instructions
 MISSING_SPEC=false
 MISSING_ARCH=false
 MISSING_PLAN=false
 
-[ ! -f "${EPIC_DIR}/spec.md" ] && MISSING_SPEC=true && MISSING_FILES+="- spec.md (Epic specification)\n"
-[ ! -f "${EPIC_DIR}/architecture.md" ] && MISSING_ARCH=true && MISSING_FILES+="- architecture.md (Architecture design)\n"
-[ ! -f "${EPIC_DIR}/implementation-details/file-tasks.md" ] && MISSING_PLAN=true && MISSING_FILES+="- implementation-details/file-tasks.md (Prescriptive implementation plan)\n"
+[ ! -f "${EPIC_DIR}/spec.md" ] && MISSING_SPEC=true
+[ ! -f "${EPIC_DIR}/architecture.md" ] && MISSING_ARCH=true
+[ ! -f "${EPIC_DIR}/implementation-details/file-tasks.md" ] && MISSING_PLAN=true
 
-if [ -n "$MISSING_FILES" ]; then
-  echo ""
-  echo "❌ Epic not ready for execution"
-  echo ""
-  echo "Missing required files:"
-  echo -e "$MISSING_FILES"
-  echo ""
-
+# Only show recovery instructions if validation failed
+if [ -n "$MISSING_FILES" ] || [ -n "$FILES_WITH_TEMPLATES" ]; then
   # Provide specific recovery instructions
-  if [ "$MISSING_PLAN" = true ] && [ "$MISSING_SPEC" = false ] && [ "$MISSING_ARCH" = false ]; then
+  if [ "$MISSING_PLAN" = true ] && [ "$MISSING_SPEC" = false ] && [ "$MISSING_ARCH" = false ] && [ -z "$FILES_WITH_TEMPLATES" ]; then
     # Only file-tasks.md is missing (common case)
     echo "═══════════════════════════════════════════════════════════════"
     echo "RECOVERY: How to generate the missing implementation plan"
@@ -125,6 +201,40 @@ if [ -n "$MISSING_FILES" ]; then
     echo ""
     echo "Make sure to use Spec Architect V6 output style for complete"
     echo "specification generation including the implementation plan."
+    echo ""
+    echo "═══════════════════════════════════════════════════════════════"
+    echo ""
+
+  elif [ -n "$FILES_WITH_TEMPLATES" ]; then
+    # Files exist but contain template placeholders (ADR-012 Phase 2 failure)
+    echo "═══════════════════════════════════════════════════════════════"
+    echo "RECOVERY: Specification contains template placeholders"
+    echo "═══════════════════════════════════════════════════════════════"
+    echo ""
+    echo "The specification files exist but are incomplete."
+    echo ""
+    echo "Files with template placeholders:"
+    echo -e "$FILES_WITH_TEMPLATES"
+    echo ""
+    echo "These files contain unfilled template markers like:"
+    echo "  - [What happens now]"
+    echo "  - [Component Name]"
+    echo "  - [table_name]"
+    echo "  - _To be defined"
+    echo ""
+    echo "**How to fix:**"
+    echo ""
+    echo "1. Open each incomplete file"
+    echo "2. Search for template markers (grep '[' or '_To be')"
+    echo "3. Replace placeholders with actual content"
+    echo "4. Re-run: /execute-workflow ${ARGUMENTS}"
+    echo ""
+    echo "**OR: Regenerate specification**"
+    echo ""
+    echo "If the specification is severely incomplete:"
+    echo "  /spec-epic ${ARGUMENTS}"
+    echo ""
+    echo "This will use Spec Architect V6 to regenerate complete files."
     echo ""
     echo "═══════════════════════════════════════════════════════════════"
     echo ""
@@ -198,25 +308,68 @@ else
 fi
 ```
 
-### Step 0.5: Check GitHub CLI Availability (Optional)
+### Step 0.5: Verify GitHub Integration (MANDATORY)
 
-Check if GitHub integration is possible:
+**CRITICAL**: GitHub integration is mandatory for Tier 1 workflow.
 
 ```bash
+echo "Verifying GitHub integration..."
+echo ""
+
 # Check if gh CLI is available and authenticated
 GITHUB_AVAILABLE=0
 
 if ! command -v gh &> /dev/null; then
-  echo "ℹ️ GitHub CLI not found - skipping issue creation"
-elif ! gh auth status &> /dev/null 2>&1; then
-  echo "ℹ️ GitHub CLI not authenticated - skipping issue creation"
-else
-  echo "✅ GitHub CLI available and authenticated"
-  GITHUB_AVAILABLE=1
+  echo "❌ GitHub CLI not found"
+  echo ""
+  echo "GitHub CLI is REQUIRED for Tier 1 workflow."
+  echo ""
+  echo "Install from: https://cli.github.com/"
+  echo ""
+  exit 1
+fi
+
+if ! gh auth status &> /dev/null 2>&1; then
+  echo "❌ GitHub CLI not authenticated"
+  echo ""
+  echo "GitHub CLI authentication is REQUIRED for Tier 1 workflow."
+  echo ""
+  echo "Authenticate with:"
+  echo "  gh auth login"
+  echo ""
+  exit 1
+fi
+
+echo "✅ GitHub CLI available and authenticated"
+
+# Verify epic has GitHub issue
+EPIC_GITHUB_ISSUE=$(python3 << 'EOF'
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path.cwd()))
+
+from tools.epic_registry import load_registry
+
+registry = load_registry()
+epic = registry.get_epic("${ARGUMENTS}")
+
+if epic and epic.github_issue:
+    print(epic.github_issue)
+else:
+    print("NONE")
+
+EOF
+)
+
+if [ "$EPIC_GITHUB_ISSUE" = "NONE" ]; then
+  echo "⚠️  Epic ${ARGUMENTS} has no GitHub issue"
+  echo "   This shouldn't happen with mandatory GitHub integration"
+  echo "   But workflow will continue..."
 fi
 
 # Store for later phases
-echo "$GITHUB_AVAILABLE" > .workflow/outputs/${ARGUMENTS}/github_available.txt
+echo "1" > .workflow/outputs/${ARGUMENTS}/github_available.txt
 ```
 
 ### Step 0.6: Display Epic Summary
@@ -1944,6 +2097,32 @@ echo "======================================================================"
 
 Analyze workflow execution and capture learnings for future improvements.
 
+### Step 6.0: Export Conversation Transcript
+
+Export the full Claude Code conversation transcript for post-mortem analysis.
+
+```bash
+echo ""
+echo "📝 Phase 6.0: Exporting conversation transcript..."
+echo ""
+
+# Export transcript using standalone utility
+python3 tools/export_conversation_transcript.py \
+  "$transcript_path" \
+  ".workflow/outputs/${ARGUMENTS}/conversation-transcript.md" \
+  "${ARGUMENTS}"
+
+if [ $? -eq 0 ]; then
+  echo "✅ Conversation transcript exported"
+else
+  echo "⚠️ Transcript export failed (continuing with post-mortem)"
+fi
+
+echo ""
+```
+
+**Note:** The `$transcript_path` variable is provided by Claude Code hooks and contains the path to the session JSONL file.
+
 ### Step 6.1: Deploy Post-Mortem Agent
 
 ```bash
@@ -2004,6 +2183,9 @@ fi)
 **Phase 5 - Commit:**
 - Final commit: $(git rev-parse --short HEAD)
 - Files changed: $(git diff HEAD~1 --stat | tail -1)
+
+**Conversation Transcript:**
+[Read .workflow/outputs/${ARGUMENTS}/conversation-transcript.md]
 
 ---
 

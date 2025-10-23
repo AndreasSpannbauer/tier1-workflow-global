@@ -396,11 +396,11 @@ Write to `${EPIC_DIR}/task.md`
 
 ---
 
-## Create GitHub Issue
+## Create GitHub Issue (MANDATORY)
 
-**CRITICAL: GitHub integration is CORE functionality - this is NOT optional**
+**CRITICAL: GitHub integration is MANDATORY - failures will block epic creation**
 
-Use Python to create GitHub issue from the epic:
+Use Python to create GitHub issue from the epic (BLOCKING mode):
 
 ```bash
 cd /home/andreas-spannbauer/v6-tier1-template
@@ -415,40 +415,71 @@ logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
 
 # Import from tools.github_integration
 sys.path.insert(0, str(Path.cwd()))
-from tools.github_integration.issue_sync_gh import create_github_issue_from_epic
+from tools.github_integration.issue_sync_gh import create_github_issue_from_epic_blocking
 
 # Get epic details from environment
 epic_id = "${EPIC_ID}"
 epic_dir = Path("${EPIC_DIR}")
 
-# Create GitHub issue
+# Create GitHub issue (BLOCKING - will raise on failure)
 print(f"\n🔗 Creating GitHub issue for {epic_id}...")
-issue_url = create_github_issue_from_epic(epic_id, epic_dir)
 
-if issue_url:
+try:
+    issue_url = create_github_issue_from_epic_blocking(epic_id, epic_dir)
     print(f"✅ GitHub Issue created: {issue_url}")
-    print(f"   Issue will be synced with epic status changes")
-else:
-    print(f"⚠️  GitHub issue creation failed")
-    print(f"   Check logs for details (non-blocking)")
-    print(f"   You can manually create issue later using:")
-    print(f"   python3 -c 'from tools.github_integration.issue_sync_gh import create_github_issue_from_epic; create_github_issue_from_epic(\"{epic_id}\", Path(\"{epic_dir}\"))'")
+
+    # Export for use in next steps
+    import os
+    os.environ["GITHUB_ISSUE_URL"] = issue_url
+
+except FileNotFoundError as e:
+    print(f"\n❌ EPIC CREATION FAILED")
+    print(f"   Missing artifact: {e}")
+    print(f"\n   Epic directory incomplete - cannot proceed")
+    print(f"   Fix the missing file and try again.")
+    sys.exit(1)
+
+except RuntimeError as e:
+    print(f"\n❌ EPIC CREATION FAILED")
+    print(f"   GitHub integration error: {e}")
+    print(f"\n   GitHub integration is MANDATORY for Tier 1 workflow.")
+
+    if "not authenticated" in str(e):
+        print(f"\n   Authenticate with:")
+        print(f"     gh auth login")
+    elif "not found" in str(e):
+        print(f"\n   Install GitHub CLI:")
+        print(f"     https://cli.github.com/")
+
+    sys.exit(1)
+
+except Exception as e:
+    print(f"\n❌ EPIC CREATION FAILED")
+    print(f"   Unexpected error: {e}")
+    print(f"\n   Contact maintainer if issue persists.")
+    sys.exit(1)
 
 PYTHON_EOF
+
+# Check exit code
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "======================================================================"
+  echo "❌ Epic creation aborted due to GitHub integration failure"
+  echo "======================================================================"
+  exit 1
+fi
+
+echo ""
+echo "✅ GitHub issue creation succeeded"
+echo ""
 ```
 
 **What this does:**
-1. Reads spec.md and architecture.md from epic directory
-2. Extracts summary (problem statement, requirements)
-3. Formats as GitHub issue body with proper markdown
-4. Creates issue with labels (epic, domain, priority)
-5. Updates task.md frontmatter with GitHub metadata:
-   - issue_number
-   - issue_url
-   - sync_enabled: true
-   - last_synced timestamp
-
-**Non-blocking:** If GitHub creation fails (network, auth, etc.), logs warning but doesn't block epic creation.
+1. Calls `create_github_issue_from_epic_blocking()` instead of non-blocking version
+2. Catches exceptions and provides clear error messages
+3. Exits with code 1 on failure (blocks epic creation)
+4. Provides actionable guidance (how to auth, install gh CLI)
 
 ---
 

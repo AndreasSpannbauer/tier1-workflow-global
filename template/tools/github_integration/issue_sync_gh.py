@@ -289,3 +289,56 @@ def _update_frontmatter_field(task_file: Path, field: str, value: any) -> None:
 
     except Exception as e:
         logger.error(f"Failed to update frontmatter field {field} in {task_file}: {e}")
+
+
+def create_github_issue_from_epic_blocking(epic_id: str, epic_dir: Path) -> str:
+    """
+    Create GitHub Issue from epic (BLOCKING mode - raises on failure).
+
+    Unlike create_github_issue_from_epic(), this function RAISES exceptions
+    instead of returning None. Use for mandatory GitHub integration.
+
+    Args:
+        epic_id: Epic identifier (e.g., "EPIC-007")
+        epic_dir: Path to epic directory
+
+    Returns:
+        issue_url (guaranteed to be non-None)
+
+    Raises:
+        FileNotFoundError: If epic artifacts missing
+        GitHubCLIError: If gh CLI fails
+        RuntimeError: If gh CLI not authenticated
+
+    Example:
+        >>> url = create_github_issue_from_epic_blocking("EPIC-007", epic_dir)
+        >>> # url is guaranteed to be valid, or exception was raised
+    """
+    # Check gh CLI authentication first
+    import subprocess
+
+    try:
+        result = subprocess.run(
+            ["gh", "auth", "status"],
+            capture_output=True,
+            check=False,
+        )
+        if result.returncode != 0:
+            raise RuntimeError(
+                "GitHub CLI not authenticated. Run: gh auth login"
+            )
+    except FileNotFoundError:
+        raise RuntimeError(
+            "GitHub CLI not found. Install from: https://cli.github.com/"
+        )
+
+    # Now call normal creation (will raise on error)
+    url = create_github_issue_from_epic(epic_id, epic_dir)
+
+    if url is None:
+        # Should not happen, but defensive check
+        raise RuntimeError(
+            f"GitHub issue creation returned None for {epic_id}"
+        )
+
+    return url
