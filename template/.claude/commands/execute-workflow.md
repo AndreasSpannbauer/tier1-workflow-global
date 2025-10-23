@@ -1,6 +1,6 @@
 ---
 description: "Execute Tier 1 workflow for epic implementation (sequential or parallel)"
-argument-hint: "<epic-id>"
+argument-hint: "<epic-id|next>"
 allowed-tools: [Read, Write, Bash, Task]
 ---
 
@@ -9,6 +9,21 @@ allowed-tools: [Read, Write, Bash, Task]
 YOU are the ORCHESTRATOR. Agents are WORKERS. You coordinate, they execute.
 
 This command executes the complete Tier 1 workflow for a given epic, supporting both sequential and parallel execution modes.
+
+## Command Syntax
+
+```bash
+/execute-workflow EPIC-003        # Execute specific epic
+/execute-workflow next            # Execute next ready epic (smart selection)
+/execute-workflow --list-ready    # List all ready unblocked epics
+```
+
+**Smart Selection** (`next`):
+- Filters epics with status = "ready"
+- Removes blocked epics (checks dependencies.blocked_by)
+- Sorts by priority (critical > high > medium > low)
+- Sorts by creation date (oldest first)
+- Returns first match
 
 ---
 
@@ -19,15 +34,83 @@ Verify the epic is ready for execution before deploying any agents.
 ### Step 0.1: Find Epic Directory
 
 ```bash
+# Handle 'next' argument for smart selection
+if [ "${ARGUMENTS}" = "next" ]; then
+  echo "🎯 Smart epic selection enabled"
+  echo ""
+
+  # Select next epic using Python
+  NEXT_EPIC=$(python3 << 'EOF'
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path.cwd()))
+
+from tools.epic_registry import load_registry
+from tools.epic_registry.epic_selector import select_next_epic
+
+try:
+    registry = load_registry()
+    next_epic = select_next_epic(registry.data)
+
+    if next_epic:
+        print(next_epic.epic_id)
+    else:
+        print("ERROR:no-ready-epics")
+
+except FileNotFoundError:
+    print("ERROR:registry-not-found")
+    exit(1)
+
+EOF
+)
+
+  if [[ "$NEXT_EPIC" == ERROR:* ]]; then
+    ERROR_TYPE="${NEXT_EPIC#ERROR:}"
+
+    if [ "$ERROR_TYPE" = "registry-not-found" ]; then
+      echo "❌ Epic registry not found"
+      echo ""
+      echo "Initialize registry first:"
+      echo "  /epic-registry-init"
+      exit 1
+
+    elif [ "$ERROR_TYPE" = "no-ready-epics" ]; then
+      echo "❌ No ready epics available"
+      echo ""
+      echo "Possible reasons:"
+      echo "  1. All ready epics are blocked by dependencies"
+      echo "  2. No epics have status 'ready'"
+      echo ""
+      echo "Check registry status:"
+      echo "  /epic-registry-status"
+      exit 1
+    fi
+  fi
+
+  # Override ARGUMENTS with selected epic
+  ARGUMENTS="$NEXT_EPIC"
+  echo "Selected epic: $NEXT_EPIC"
+  echo ""
+fi
+
+# Find epic directory (works for both explicit and 'next')
 EPIC_DIR=$(find .tasks -name "${ARGUMENTS}-*" -type d | head -1)
+
+if [ -z "$EPIC_DIR" ]; then
+  echo "❌ Epic directory not found for: ${ARGUMENTS}"
+  echo ""
+  echo "Check: .tasks/backlog/${ARGUMENTS}-*/"
+  echo "       .tasks/current/${ARGUMENTS}-*/"
+  echo ""
+  echo "Run: /task-list to view available epics"
+  exit 1
+fi
+
+echo "Epic directory: $EPIC_DIR"
 ```
 
-If not found:
-```
-❌ Epic directory not found for: ${ARGUMENTS}
-Check: .tasks/backlog/${ARGUMENTS}-*/
-Run: /task-list to view available epics
-```
+Store EPIC_DIR for use in subsequent steps.
 
 ### Step 0.2: Verify Required Files (Two-Phase Validation)
 

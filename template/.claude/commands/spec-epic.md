@@ -241,6 +241,83 @@ echo ""
 
 ---
 
+## Phase 0.5: Consult Past Epics (Longitudinal Learning)
+
+**Purpose**: Learn from past epic implementations before planning new epic.
+
+Read epic registry and identify lessons from similar epics:
+
+```bash
+echo "📚 Consulting past epics for lessons..."
+echo ""
+
+python3 << 'EOF'
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path.cwd()))
+
+from tools.epic_registry import load_registry
+
+try:
+    registry = load_registry()
+
+    # Find implemented epics
+    implemented = [e for e in registry.data.epics if e.status == "implemented"]
+
+    if not implemented:
+        print("ℹ️  No past epics to learn from (first epic in project)")
+        sys.exit(0)
+
+    print(f"📊 Found {len(implemented)} implemented epics")
+    print("")
+    print("Reading post-mortems for lessons...")
+    print("")
+
+    for epic in implemented:
+        if epic.post_mortem:
+            post_mortem_file = Path(epic.post_mortem)
+            if post_mortem_file.exists():
+                print(f"## {epic.epic_id}: {epic.title}")
+                print(f"Tags: {', '.join(epic.tags)}")
+                print("")
+
+                # Extract "Recommendations" section
+                with open(post_mortem_file) as f:
+                    content = f.read()
+                    if "## Recommendations" in content:
+                        recs_section = content.split("## Recommendations")[1]
+                        # Get until next ## or end
+                        if "##" in recs_section[2:]:
+                            recs_section = recs_section.split("##")[0]
+
+                        # Truncate to 500 chars
+                        recs = recs_section.strip()[:500]
+                        print(recs)
+                        if len(recs_section.strip()) > 500:
+                            print("... (truncated)")
+                        print("")
+            else:
+                print(f"⚠️  Post-mortem missing for {epic.epic_id}")
+                print("")
+
+except FileNotFoundError:
+    print("ℹ️  Epic registry not found (initialize with /epic-registry-init)")
+    sys.exit(0)
+
+EOF
+
+echo ""
+echo "Use these lessons to inform:"
+echo "  - Architecture decisions"
+echo "  - Technology choices"
+echo "  - Common pitfalls to avoid"
+echo "  - Briefing improvements to apply"
+echo ""
+```
+
+---
+
 ## Generate Epic ID
 
 Use bash to generate the next epic ID from the registry:
