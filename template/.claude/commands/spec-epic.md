@@ -105,27 +105,186 @@ Please provide your answers below each question:
 
 ---
 
+## Consult Workflow Pattern Library
+
+**CRITICAL:** Query the workflow pattern library to improve spec quality and completeness.
+
+Search the workflow pattern library for relevant patterns in three areas:
+
+### 1. Spec Completeness Patterns
+
+```bash
+# Search for spec-related patterns
+echo "🔍 Searching workflow patterns for spec guidance..."
+echo ""
+
+# Check if pattern library exists
+if [ -d "$HOME/.claude/workflow_pattern_library/patterns" ]; then
+  # Use Context7-style semantic search via Python
+  python3 << 'EOF'
+import os
+from pathlib import Path
+
+pattern_dir = Path.home() / ".claude" / "workflow_pattern_library" / "patterns"
+
+if pattern_dir.exists():
+    print("📚 Consulting workflow pattern library...")
+    print("")
+    print("**Spec-related patterns found:**")
+
+    # Search for spec-related patterns
+    spec_patterns = list(pattern_dir.glob("*spec*.md")) + list(pattern_dir.glob("*completeness*.md"))
+
+    if spec_patterns:
+        for pattern in spec_patterns[:3]:  # Top 3
+            print(f"  - {pattern.name}")
+    else:
+        print("  (No spec-specific patterns yet)")
+
+    print("")
+else:
+    print("ℹ️ Workflow pattern library not found (first epic in workflow)")
+    print("")
+EOF
+else
+  echo "ℹ️ Workflow pattern library not initialized (first epic in workflow)"
+  echo ""
+fi
+```
+
+**Action:** Read relevant spec patterns and incorporate their guidance:
+- Missing sections that should be included
+- Common acceptance criteria structures
+- Edge cases frequently forgotten
+- Contract definition patterns
+
+### 2. Architecture Design Patterns
+
+```bash
+echo "🔍 Searching for architecture patterns..."
+echo ""
+
+python3 << 'EOF'
+from pathlib import Path
+
+pattern_dir = Path.home() / ".claude" / "workflow_pattern_library" / "patterns"
+
+if pattern_dir.exists():
+    print("**Architecture-related patterns found:**")
+
+    # Search for architecture patterns
+    arch_patterns = list(pattern_dir.glob("*architecture*.md")) + list(pattern_dir.glob("*design*.md"))
+
+    if arch_patterns:
+        for pattern in arch_patterns[:3]:  # Top 3
+            print(f"  - {pattern.name}")
+    else:
+        print("  (No architecture-specific patterns yet)")
+
+    print("")
+EOF
+```
+
+**Action:** Read relevant architecture patterns and apply:
+- Component separation principles
+- Data flow patterns
+- Integration patterns with existing systems
+- Common architectural mistakes to avoid
+
+### 3. Implementation Planning Patterns
+
+```bash
+echo "🔍 Searching for planning patterns..."
+echo ""
+
+python3 << 'EOF'
+from pathlib import Path
+
+pattern_dir = Path.home() / ".claude" / "workflow_pattern_library" / "patterns"
+
+if pattern_dir.exists():
+    print("**Planning-related patterns found:**")
+
+    # Search for planning patterns
+    plan_patterns = list(pattern_dir.glob("*plan*.md")) + list(pattern_dir.glob("*task*.md")) + list(pattern_dir.glob("*implementation*.md"))
+
+    if plan_patterns:
+        for pattern in plan_patterns[:3]:  # Top 3
+            print(f"  - {pattern.name}")
+    else:
+        print("  (No planning-specific patterns yet)")
+
+    print("")
+EOF
+```
+
+**Action:** Read relevant planning patterns for later use:
+- Task breakdown strategies
+- File-tasks.md structure patterns
+- Dependency ordering
+- Common implementation oversights
+
+### Pattern Integration
+
+**Important:** The patterns above are GUIDANCE, not strict requirements. Use professional judgment:
+- Apply patterns that fit the current epic
+- Adapt patterns to specific context
+- Skip patterns that don't apply
+- Document deviations if significant
+
+```bash
+echo "✅ Pattern consultation complete"
+echo ""
+echo "Continue with epic generation, incorporating pattern guidance..."
+echo ""
+```
+
+---
+
 ## Generate Epic ID
 
-Use bash to find the next epic ID:
+Use bash to generate the next epic ID from the registry:
 
 ```bash
 cd /home/andreas-spannbauer/v6-tier1-template
 
-# Find all epic directories and task files
-LAST_EPIC=$(find .tasks/backlog .tasks/current .tasks/completed -name "EPIC-*.task.md" -o -name "EPIC-*" -type d 2>/dev/null | \
-  sed 's/.*EPIC-\([0-9]*\).*/\1/' | \
-  sort -n | \
-  tail -1)
+# Load registry and generate ID
+NEXT_EPIC_INFO=$(python3 << 'EOF'
+import sys
+from pathlib import Path
 
-# Calculate next ID
-NEXT_EPIC=$((${LAST_EPIC:-0} + 1))
-EPIC_ID=$(printf "EPIC-%03d" $NEXT_EPIC)
+sys.path.insert(0, str(Path.cwd()))
 
-echo "Generated Epic ID: ${EPIC_ID}"
+from tools.epic_registry import load_registry
+
+try:
+    registry = load_registry()
+    epic_id = registry.generate_epic_id()
+    epic_number = registry.get_next_epic_number()
+    print(f"{epic_id}:{epic_number}")
+except FileNotFoundError:
+    print("ERROR:registry-not-found")
+    exit(1)
+
+EOF
+)
+
+if [[ "$NEXT_EPIC_INFO" == ERROR:* ]]; then
+  echo "❌ Epic registry not found"
+  echo ""
+  echo "Initialize registry first:"
+  echo "  /epic-registry-init"
+  echo ""
+  exit 1
+fi
+
+EPIC_ID=$(echo "$NEXT_EPIC_INFO" | cut -d: -f1)
+EPIC_NUMBER=$(echo "$NEXT_EPIC_INFO" | cut -d: -f2)
+
+echo "Generated Epic ID: ${EPIC_ID} (number: ${EPIC_NUMBER})"
 ```
 
-Store the EPIC_ID for use in subsequent steps.
+Store both EPIC_ID and EPIC_NUMBER for use in subsequent steps.
 
 ---
 
@@ -293,6 +452,62 @@ PYTHON_EOF
 
 ---
 
+## Add Epic to Registry
+
+Add the newly created epic to the registry:
+
+```bash
+python3 << 'PYTHON_EOF'
+import sys
+from pathlib import Path
+from datetime import datetime, timezone
+
+sys.path.insert(0, str(Path.cwd()))
+
+from tools.epic_registry import load_registry
+from tools.epic_registry.models import Epic, EpicStatus, EpicDependencies
+
+registry = load_registry()
+
+# Extract issue number from issue_url if available
+issue_number = None
+issue_url = "${issue_url}" if "${issue_url}" else None
+
+if issue_url:
+    # Extract issue number from URL (e.g., https://github.com/user/repo/issues/42 -> 42)
+    import re
+    match = re.search(r'/issues/(\d+)$', issue_url)
+    if match:
+        issue_number = int(match.group(1))
+
+# Create epic object
+epic = Epic(
+    epic_id="${EPIC_ID}",
+    epic_number=${EPIC_NUMBER},
+    title="${TITLE}",
+    slug="${EPIC_SLUG}",
+    status=EpicStatus.DEFINED,
+    created_date=datetime.now(timezone.utc).date().isoformat(),
+    directory="${EPIC_DIR}",
+    github_issue=issue_number,
+    github_url=issue_url,
+    tags=["${domain}"],
+    dependencies=EpicDependencies(),
+)
+
+# Add to registry
+registry.add_epic(epic)
+registry.save()
+
+print(f"✅ Epic added to registry: {epic.epic_id}")
+print(f"   Status: {epic.status.value}")
+print(f"   Next epic number: {registry.data.next_epic_number}")
+
+PYTHON_EOF
+```
+
+---
+
 ## Validation Check
 
 **CRITICAL:** Verify the Spec Architect output style generated the implementation plan.
@@ -367,13 +582,17 @@ Created files:
 - research/ (spikes, investigations)
 
 🔗 GitHub Issue: [URL from creation step]
+📋 Registry: .tasks/epic_registry.json (updated)
+📊 Status: DEFINED
 
 Next steps:
 1. Review specification: code ${EPIC_DIR}/spec.md
 2. Design architecture: code ${EPIC_DIR}/architecture.md
 3. Define contracts: code ${EPIC_DIR}/contracts/
-4. Break into tasks: /task-create feature "Task title"
-5. View epic: /task-get ${EPIC_ID}
+4. View registry: /epic-registry-status
+5. Execute epic: /execute-workflow ${EPIC_ID}
+6. Break into tasks: /task-create feature "Task title"
+7. View epic: /task-get ${EPIC_ID}
 
 Pro tips:
 - Use contracts/ for API schemas, event definitions
