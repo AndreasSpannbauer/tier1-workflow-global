@@ -2008,6 +2008,369 @@ The workflow will continue but manual review is recommended.
 fi
 ```
 
+**Proceed to Phase 4.5 (Integration Planning)**
+
+---
+
+## PHASE 4.5: INTEGRATION PLANNING (EPIC REGISTRY)
+
+**Condition**: Only runs if epic registry exists (`.tasks/epic_registry.json`)
+
+Analyze how this epic integrates with past epics (backward integration) and how future epics should integrate with this (forward integration).
+
+### Step 4.5.1: Check Epic Registry
+
+```bash
+echo ""
+echo "════════════════════════════════════════════════════════════════"
+echo "Phase 4.5: Integration Planning (Epic Registry)"
+echo "════════════════════════════════════════════════════════════════"
+echo ""
+
+# Check if epic registry exists
+if [ ! -f .tasks/epic_registry.json ]; then
+  echo "ℹ️ Epic registry not found (.tasks/epic_registry.json)"
+  echo "   Skipping integration planning phase"
+  echo ""
+  echo "   To enable integration planning:"
+  echo "   1. Run: /epic-registry-init"
+  echo "   2. Re-run this workflow"
+  echo ""
+  echo "Proceeding to Phase 5 (Commit & Cleanup)..."
+  exit 0
+fi
+
+echo "✅ Epic registry found"
+echo ""
+```
+
+### Step 4.5.2: Extract Epic Metadata
+
+```bash
+echo "🔍 Loading epic metadata from registry..."
+
+# Get epic metadata from registry
+EPIC_METADATA=$(python3 << 'PYTHON_EOF'
+import sys
+import json
+from pathlib import Path
+
+# Add template tools to path
+template_dir = Path.home() / "tier1_workflow_global" / "template"
+sys.path.insert(0, str(template_dir))
+
+try:
+    from tools.epic_registry import load_registry
+
+    registry = load_registry()
+    epic = registry.get_epic("${ARGUMENTS}")
+
+    if not epic:
+        print(json.dumps({"error": "Epic not found in registry"}))
+        sys.exit(1)
+
+    metadata = {
+        "epic_id": epic.epic_id,
+        "epic_number": epic.epic_number,
+        "title": epic.title,
+        "tags": epic.tags,
+        "dependencies": {
+            "blocks": epic.dependencies.blocks,
+            "blocked_by": epic.dependencies.blocked_by,
+            "integrates_with": epic.dependencies.integrates_with
+        },
+        "directory": epic.directory
+    }
+
+    print(json.dumps(metadata, indent=2))
+
+except Exception as e:
+    print(json.dumps({"error": str(e)}))
+    sys.exit(1)
+PYTHON_EOF
+)
+
+# Check if metadata extraction succeeded
+if echo "$EPIC_METADATA" | grep -q '"error"'; then
+  echo "❌ Failed to load epic metadata"
+  echo "$EPIC_METADATA"
+  echo ""
+  echo "⚠️ Skipping integration planning"
+  echo "Proceeding to Phase 5 (Commit & Cleanup)..."
+  exit 0
+fi
+
+echo "✅ Epic metadata loaded"
+echo ""
+```
+
+### Step 4.5.3: Deploy Integration Planning Agent
+
+```bash
+echo "🔗 Analyzing epic integrations..."
+echo ""
+
+# Create outputs directory for integration plan
+mkdir -p .workflow/outputs/${ARGUMENTS}
+
+# Prepare agent context
+AGENT_CONTEXT=$(cat << EOF
+# Integration Planning Context
+
+## Epic Metadata
+${EPIC_METADATA}
+
+## Epic Directory
+${EPIC_DIR}
+
+## Task
+
+Analyze integration points for epic **${ARGUMENTS}**.
+
+### Step 1: Read Epic Artifacts
+1. Read \`${EPIC_DIR}/spec.md\` - Understand WHAT is being built
+2. Read \`${EPIC_DIR}/architecture.md\` - Understand HOW it's being built
+3. Read \`${EPIC_DIR}/implementation_plan.md\` - See detailed tasks
+
+### Step 2: Analyze Backward Integration
+- Load epic registry: \`.tasks/epic_registry.json\`
+- Find related past epics (by dependencies, tags, implemented status)
+- Identify integration points (shared components, APIs, data models)
+- Generate concrete integration tasks with file paths and priorities
+
+### Step 3: Analyze Forward Integration
+- Identify reusable components created by this epic
+- Find future epics that might integrate with this
+- Document integration patterns
+- Suggest registry updates
+
+### Step 4: Consult Past Post-Mortems
+- Find post-mortem files: \`.tasks/completed/*/post_mortem.md\`
+- Extract integration lessons learned
+- Apply patterns to this epic's integration plan
+
+### Step 5: Generate Integration Plan
+Write integration plan JSON to: \`${EPIC_DIR}/integration_plan.json\`
+
+Follow the schema and examples in agent briefing: \`.claude/agent_briefings/integration_planning.md\`
+
+## Agent Definition
+Load agent instructions from: \`.claude/agents/integration_planning_agent_v1.md\`
+
+---
+
+BEGIN INTEGRATION ANALYSIS.
+EOF
+)
+
+# Deploy integration planning agent
+Task(
+    subagent_type="general-purpose",
+    description="Integration planning analysis for ${ARGUMENTS}",
+    prompt="${AGENT_CONTEXT}"
+)
+```
+
+### Step 4.5.4: Validate Integration Plan
+
+```bash
+echo ""
+echo "📊 Validating integration plan..."
+
+# Check if integration plan was created
+if [ ! -f "${EPIC_DIR}/integration_plan.json" ]; then
+  echo "⚠️ Integration plan not generated"
+  echo "   Expected: ${EPIC_DIR}/integration_plan.json"
+  echo ""
+  echo "   This may happen if:"
+  echo "   - Agent failed to complete"
+  echo "   - No integration points found"
+  echo "   - Registry is empty"
+  echo ""
+  echo "Proceeding to Phase 5 (Commit & Cleanup)..."
+  exit 0
+fi
+
+# Validate JSON structure
+python3 << 'PYTHON_EOF'
+import json
+import sys
+from pathlib import Path
+
+plan_file = Path("${EPIC_DIR}/integration_plan.json")
+
+try:
+    plan = json.loads(plan_file.read_text())
+
+    # Verify required fields
+    required_fields = ["epic_id", "backward_integration", "forward_integration"]
+    missing = [f for f in required_fields if f not in plan]
+
+    if missing:
+        print(f"❌ Integration plan missing required fields: {missing}")
+        sys.exit(1)
+
+    print("✅ Integration plan is valid JSON")
+
+except json.JSONDecodeError as e:
+    print(f"❌ Integration plan is not valid JSON: {e}")
+    sys.exit(1)
+except Exception as e:
+    print(f"❌ Error validating integration plan: {e}")
+    sys.exit(1)
+PYTHON_EOF
+
+if [ $? -ne 0 ]; then
+  echo "⚠️ Integration plan validation failed"
+  echo "   Proceeding anyway, but manual review recommended"
+  echo ""
+fi
+```
+
+### Step 4.5.5: Display Integration Summary
+
+```bash
+echo ""
+echo "📋 Integration Plan Summary"
+echo "──────────────────────────────────────────────────────────────"
+
+python3 << 'PYTHON_EOF'
+import json
+from pathlib import Path
+
+plan_file = Path("${EPIC_DIR}/integration_plan.json")
+
+try:
+    plan = json.loads(plan_file.read_text())
+
+    # Backward integration summary
+    backward = plan.get("backward_integration", {})
+    related_epics = backward.get("related_epics", [])
+    integration_tasks = backward.get("integration_tasks", [])
+
+    print("🔙 Backward Integration:")
+    if related_epics:
+        print(f"   Related Past Epics: {len(related_epics)}")
+        for epic_info in related_epics[:3]:
+            epic_id = epic_info.get("epic_id", "unknown")
+            title = epic_info.get("epic_title", "unknown")
+            relationship = epic_info.get("relationship", "unknown")
+            print(f"     - {epic_id}: {title} ({relationship})")
+        if len(related_epics) > 3:
+            print(f"     ... and {len(related_epics) - 3} more")
+    else:
+        print("   No past epic integrations identified")
+
+    print("")
+
+    if integration_tasks:
+        print(f"   Integration Tasks: {len(integration_tasks)}")
+
+        # Group by priority
+        high = [t for t in integration_tasks if t.get("priority") == "high"]
+        medium = [t for t in integration_tasks if t.get("priority") == "medium"]
+        low = [t for t in integration_tasks if t.get("priority") == "low"]
+
+        if high:
+            print(f"     HIGH priority: {len(high)} tasks")
+            for task in high[:2]:
+                print(f"       - {task.get('task', 'unknown')}")
+        if medium:
+            print(f"     MEDIUM priority: {len(medium)} tasks")
+        if low:
+            print(f"     LOW priority: {len(low)} tasks")
+    else:
+        print("   No integration tasks identified")
+
+    print("")
+
+    # Forward integration summary
+    forward = plan.get("forward_integration", {})
+    reusable_components = forward.get("reusable_components", [])
+    future_epic_updates = forward.get("future_epic_updates", [])
+
+    print("🔜 Forward Integration:")
+    if reusable_components:
+        print(f"   Reusable Components: {len(reusable_components)}")
+        for component in reusable_components[:3]:
+            name = component.get("component", "unknown")
+            location = component.get("location", "unknown")
+            print(f"     - {name} ({location})")
+    else:
+        print("   No reusable components identified")
+
+    print("")
+
+    if future_epic_updates:
+        print(f"   Future Epic Updates: {len(future_epic_updates)}")
+        for update in future_epic_updates[:3]:
+            epic_id = update.get("epic_id", "unknown")
+            update_type = update.get("update_type", "unknown")
+            desc = update.get("description", "unknown")
+            print(f"     - {epic_id} ({update_type}): {desc}")
+        if len(future_epic_updates) > 3:
+            print(f"     ... and {len(future_epic_updates) - 3} more")
+    else:
+        print("   No future epic updates identified")
+
+    # Post-mortem insights
+    insights = plan.get("post_mortem_insights", [])
+    if insights:
+        print("")
+        print(f"💡 Post-Mortem Insights: {len(insights)}")
+        for insight in insights[:2]:
+            lesson = insight.get("lesson", "unknown")
+            source = insight.get("source_epic", "unknown")
+            print(f"     - {lesson} (from {source})")
+
+except Exception as e:
+    print(f"Error displaying summary: {e}")
+    print("")
+    print("See full integration plan:")
+    print(f"   {plan_file}")
+
+PYTHON_EOF
+
+echo ""
+echo "──────────────────────────────────────────────────────────────"
+echo "📄 Full integration plan: ${EPIC_DIR}/integration_plan.json"
+echo ""
+```
+
+### Step 4.5.6: Add Integration Plan to Git
+
+```bash
+echo "📝 Adding integration plan to git staging..."
+
+git add "${EPIC_DIR}/integration_plan.json"
+
+if [ $? -eq 0 ]; then
+  echo "✅ Integration plan staged for commit"
+else
+  echo "⚠️ Failed to stage integration plan"
+fi
+
+echo ""
+```
+
+### Step 4.5.7: User Review Prompt
+
+```bash
+echo "════════════════════════════════════════════════════════════════"
+echo "✅ Phase 4.5 Complete: Integration Planning"
+echo "════════════════════════════════════════════════════════════════"
+echo ""
+echo "📋 Action Items:"
+echo "   1. Review integration plan: ${EPIC_DIR}/integration_plan.json"
+echo "   2. Verify integration tasks are accurate"
+echo "   3. Check priority assignments"
+echo "   4. Confirm future epic updates"
+echo ""
+echo "Press Enter to continue to Phase 5 (Commit & Cleanup)..."
+read
+echo ""
+```
+
 **Proceed to Phase 5 (Commit & Cleanup)**
 
 ---
