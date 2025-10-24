@@ -2552,22 +2552,34 @@ echo ""
 echo "📝 Phase 6.0: Exporting conversation transcript..."
 echo ""
 
-# Export transcript using standalone utility
-python3 tools/export_conversation_transcript.py \
-  "$transcript_path" \
-  ".workflow/outputs/${ARGUMENTS}/conversation-transcript.md" \
-  "${ARGUMENTS}"
+# Read transcript_path from file written by UserPromptSubmit hook
+transcript_path=""
+if [ -f ".workflow/transcript_path.txt" ]; then
+  transcript_path=$(cat .workflow/transcript_path.txt)
+fi
 
-if [ $? -eq 0 ]; then
-  echo "✅ Conversation transcript exported"
+if [ -n "$transcript_path" ] && [ -f "$transcript_path" ]; then
+  # Export transcript using standalone utility
+  python3 tools/export_conversation_transcript.py \
+    "$transcript_path" \
+    ".workflow/outputs/${ARGUMENTS}/conversation-transcript.md" \
+    "${ARGUMENTS}"
+
+  if [ $? -eq 0 ]; then
+    echo "✅ Conversation transcript exported"
+  else
+    echo "⚠️ Transcript export failed (continuing with post-mortem)"
+  fi
 else
-  echo "⚠️ Transcript export failed (continuing with post-mortem)"
+  echo "⚠️ Transcript path not available (hook may not be configured)"
+  echo "   To enable: Add UserPromptSubmit hook in .claude/settings.json"
+  echo "   Continuing with post-mortem using placeholder..."
 fi
 
 echo ""
 ```
 
-**Note:** The `$transcript_path` variable is provided by Claude Code hooks and contains the path to the session JSONL file.
+**Note:** The transcript path is captured by the UserPromptSubmit hook and written to `.workflow/transcript_path.txt`. The hook must be configured in `.claude/settings.json` for this feature to work.
 
 ### Step 6.1: Deploy Post-Mortem Agent
 

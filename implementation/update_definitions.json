@@ -42,6 +42,83 @@
           "tools/detect_simulation_code.py"
         ]
       }
+    },
+    {
+      "id": "transcript-path-hook-v1",
+      "version": "1.0.0",
+      "date": "2025-10-24",
+      "description": "Add UserPromptSubmit hook to capture transcript_path for post-mortem conversation logs",
+      "priority": "critical",
+      "source": "V6 workflow observability gap - missing conversation transcripts",
+      "components": [
+        {
+          "type": "copy_if_missing",
+          "target": ".claude/hooks/capture_transcript_path.py",
+          "source": "template/.claude/hooks/capture_transcript_path.py",
+          "idempotent_check": "test -f {target}",
+          "description": "Add transcript path capture hook"
+        },
+        {
+          "type": "copy_if_missing",
+          "target": ".claude/hooks/README.md",
+          "source": "template/.claude/hooks/README.md",
+          "idempotent_check": "test -f {target}",
+          "description": "Add hooks documentation"
+        },
+        {
+          "type": "patch_execute_workflow",
+          "target": ".claude/commands/execute-workflow.md",
+          "description": "Update execute-workflow to read transcript_path from file",
+          "operations": [
+            {
+              "search": "# Export transcript using standalone utility\npython3 tools/export_conversation_transcript.py \\\n  \"$transcript_path\" \\\n  \".workflow/outputs/${ARGUMENTS}/conversation-transcript.md\" \\\n  \"${ARGUMENTS}\"",
+              "replace": "# Read transcript_path from file written by UserPromptSubmit hook\ntranscript_path=\"\"\nif [ -f \".workflow/transcript_path.txt\" ]; then\n  transcript_path=$(cat .workflow/transcript_path.txt)\nfi\n\nif [ -n \"$transcript_path\" ] && [ -f \"$transcript_path\" ]; then\n  # Export transcript using standalone utility\n  python3 tools/export_conversation_transcript.py \\\n    \"$transcript_path\" \\\n    \".workflow/outputs/${ARGUMENTS}/conversation-transcript.md\" \\\n    \"${ARGUMENTS}\"\nelse\n  echo \"⚠️ Transcript path not available (hook may not be configured)\"\n  echo \"   To enable: Add UserPromptSubmit hook in .claude/settings.json\"\n  echo \"   Continuing with post-mortem using placeholder...\"\nfi",
+              "idempotent_check": "grep -q 'transcript_path.txt' {target}"
+            }
+          ]
+        },
+        {
+          "type": "merge_json",
+          "target": ".claude/settings.json",
+          "merge_data": {
+            "hooks": {
+              "UserPromptSubmit": [
+                {
+                  "hooks": [
+                    {
+                      "type": "command",
+                      "command": "python3 .claude/hooks/capture_transcript_path.py"
+                    }
+                  ]
+                }
+              ]
+            }
+          },
+          "idempotent_check": "grep -q 'capture_transcript_path' {target} || ! test -f {target}",
+          "description": "Add UserPromptSubmit hook to settings.json"
+        }
+      ],
+      "validation": {
+        "required_files": [
+          ".claude/hooks/capture_transcript_path.py",
+          ".claude/hooks/README.md"
+        ],
+        "required_keywords": [
+          "transcript_path.txt",
+          "UserPromptSubmit",
+          "capture_transcript_path.py"
+        ],
+        "files_to_check": [
+          ".claude/settings.json",
+          ".claude/commands/execute-workflow.md"
+        ]
+      },
+      "notes": [
+        "This update fixes the critical observability gap where conversation transcripts were not being exported to post-mortem analysis",
+        "Hook must be executable: chmod +x .claude/hooks/capture_transcript_path.py",
+        "After deployment, verify .workflow/transcript_path.txt is created when slash commands run",
+        "This enables full conversation history in post-mortem reports for better workflow analysis"
+      ]
     }
   ]
 }
