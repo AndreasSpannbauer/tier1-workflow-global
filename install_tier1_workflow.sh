@@ -469,13 +469,13 @@ install_validation_scripts() {
 
     case "${PROJECT_TYPE}" in
         python)
-            scripts=("validate_architecture.py" "validate_contracts.py")
+            scripts=("validate_architecture.py" "validate_contracts.py" "detect_simulation_code.py")
             ;;
         typescript)
-            scripts=("validate_architecture.py" "validate_contracts.py")
+            scripts=("validate_architecture.py" "validate_contracts.py" "detect_simulation_code.py")
             ;;
         mixed)
-            scripts=("validate_architecture.py" "validate_contracts.py")
+            scripts=("validate_architecture.py" "validate_contracts.py" "detect_simulation_code.py")
             ;;
     esac
 
@@ -709,6 +709,7 @@ rollback_installation() {
     rm -rf "${PROJECT_DIR}/.workflow" 2>/dev/null || true
     rm -rf "${PROJECT_DIR}/.worktrees" 2>/dev/null || true
     rm -rf "${PROJECT_DIR}/tools/validate_*.py" 2>/dev/null || true
+    rm -rf "${PROJECT_DIR}/tools/detect_simulation_code.py" 2>/dev/null || true
     rm -rf "${PROJECT_DIR}/tools/github_integration" 2>/dev/null || true
     rm -rf "${PROJECT_DIR}/tools/worktree_manager" 2>/dev/null || true
     rm -rf "${PROJECT_DIR}/tools/parallel_detection.py" 2>/dev/null || true
@@ -730,6 +731,7 @@ show_summary() {
     echo "  ${BOLD}.claude/${RESET}"
     echo "    ├── commands/          (8 workflow commands)"
     echo "    ├── output-styles/     (1 spec architect style)"
+    echo "    ├── agents/            (4 agents: implementation, post-mortem, build-fixer, integration-planning)"
     echo "    └── README.md          (workflow guide)"
     echo ""
     echo "  ${BOLD}.tasks/${RESET}"
@@ -747,6 +749,7 @@ show_summary() {
     echo "  ${BOLD}tools/${RESET}"
     echo "    ├── validate_architecture.py"
     echo "    ├── validate_contracts.py"
+    echo "    ├── detect_simulation_code.py"
     echo "    ├── parallel_detection.py"
     echo "    ├── github_integration/    (GitHub sync tools)"
     echo "    └── worktree_manager/      (worktree utilities)"
@@ -803,6 +806,10 @@ verify_installation() {
     local required_files=(
         ".claude/commands/execute-workflow.md"
         ".claude/output-styles/spec-architect-template.md"
+        ".claude/agents/implementation_agent_v1.md"
+        ".claude/agents/post_mortem_agent_v1.md"
+        ".claude/agents/build_fixer_agent_v1.md"
+        ".claude/agents/integration_planning_agent_v1.md"
         ".tasks/templates/spec.md.j2"
         "tools/validate_architecture.py"
     )

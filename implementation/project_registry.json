@@ -1,0 +1,62 @@
+{
+  "schema_version": "1.0",
+  "template_version": "2025-10-21",
+  "last_sync": "2025-10-21T16:30:00Z",
+  "projects": [
+    {
+      "name": "tier1_workflow_global",
+      "path": "/home/andreas-spannbauer/tier1_workflow_global",
+      "workflow_type": "Tier1",
+      "installed_date": "2025-10-21",
+      "last_verified": "2025-10-21",
+      "template_hash": "8b2ad7e",
+      "has_custom_modifications": false,
+      "custom_commands": [],
+      "notes": "Global template repository (source of truth)"
+    },
+    {
+      "name": "email_management_system",
+      "path": "/home/andreas-spannbauer/email_management_system",
+      "workflow_type": "V6",
+      "installed_date": "2025-10-19",
+      "last_verified": "2025-10-21",
+      "template_hash": "8b2ad7e",
+      "has_custom_modifications": true,
+      "custom_commands": ["w-workflow-v6-mcp"],
+      "notes": "Uses V6 MCP workflow variant with custom Step 0 preflight"
+    },
+    {
+      "name": "whisper_hotkeys",
+      "path": "/home/andreas-spannbauer/whisper_hotkeys",
+      "workflow_type": "Tier1",
+      "installed_date": "2025-10-19",
+      "last_verified": "2025-10-21",
+      "template_hash": "8b2ad7e",
+      "has_custom_modifications": false,
+      "custom_commands": [],
+      "notes": "Voice transcription project"
+    },
+    {
+      "name": "ppt_pipeline",
+      "path": "/home/andreas-spannbauer/ppt_pipeline",
+      "workflow_type": "Tier1",
+      "installed_date": "2025-10-19",
+      "last_verified": "2025-10-21",
+      "template_hash": "8b2ad7e",
+      "has_custom_modifications": false,
+      "custom_commands": [],
+      "notes": "PowerPoint processing pipeline"
+    },
+    {
+      "name": "clinical-eda-pipeline",
+      "path": "/home/andreas-spannbauer/clinical-eda-pipeline",
+      "workflow_type": "Reference",
+      "installed_date": "2025-10-18",
+      "last_verified": "2025-10-21",
+      "template_hash": "77158d8",
+      "has_custom_modifications": false,
+      "custom_commands": [],
+      "notes": "Reference project (lessons integrated into global template)"
+    }
+  ]
+}

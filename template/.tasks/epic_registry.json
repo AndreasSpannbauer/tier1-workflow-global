@@ -1,0 +1,78 @@
+{
+  "schema_version": "2.0",
+  "project_name": "template",
+  "master_spec_path": ".tasks/master_spec.md",
+  "created": "2025-10-23T08:21:15.528532Z",
+  "last_updated": "2025-10-23T08:21:49.593697Z",
+  "github_repo": "AndreasSpannbauer/tier1-workflow-global",
+  "next_epic_number": 3,
+  "statistics": {
+    "total_epics": 2,
+    "defined": 1,
+    "prepared": 0,
+    "ready": 0,
+    "implemented": 1,
+    "archived": 0
+  },
+  "epics": [
+    {
+      "epic_id": "EPIC-001",
+      "epic_number": 1,
+      "title": "Test Epic: Registry Integration",
+      "slug": "test-epic-registry-integration",
+      "status": "implemented",
+      "created_date": "2025-10-23",
+      "prepared_date": "2025-10-23",
+      "implemented_date": "2025-10-23",
+      "directory": ".tasks/backlog/EPIC-001-test-epic-registry-integration",
+      "github_issue": 42,
+      "github_url": "https://github.com/AndreasSpannbauer/tier1-workflow-global/issues/42",
+      "execution_mode": null,
+      "files_created": null,
+      "files_modified": null,
+      "post_mortem": null,
+      "integration_notes": null,
+      "tags": [
+        "backend",
+        "test"
+      ],
+      "dependencies": {
+        "blocks": [],
+        "blocked_by": [],
+        "integrates_with": []
+      }
+    },
+    {
+      "epic_id": "EPIC-002",
+      "epic_number": 2,
+      "title": "Test Epic: GitHub Integration",
+      "slug": "test-epic-github-integration",
+      "status": "defined",
+      "created_date": "2025-10-23",
+      "prepared_date": null,
+      "implemented_date": null,
+      "directory": ".tasks/backlog/EPIC-002-test-epic-github-integration",
+      "github_issue": null,
+      "github_url": null,
+      "execution_mode": null,
+      "files_created": null,
+      "files_modified": null,
+      "post_mortem": null,
+      "integration_notes": null,
+      "tags": [
+        "backend",
+        "github"
+      ],
+      "dependencies": {
+        "blocks": [],
+        "blocked_by": [
+          "EPIC-001"
+        ],
+        "integrates_with": [
+          "EPIC-001"
+        ]
+      }
+    }
+  ],
+  "master_spec_coverage": null
+}

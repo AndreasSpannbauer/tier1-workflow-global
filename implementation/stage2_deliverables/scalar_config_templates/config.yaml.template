@@ -1,0 +1,390 @@
+# SCALAR Configuration Template
+# Copy to config.yaml and customize for your environment
+
+# ============================================================================
+# PROJECT PATHS
+# ============================================================================
+
+project:
+  root: ${SCALAR_ROOT}  # Auto-detected from environment
+  data_dir: ${SCALAR_ROOT}/data
+  cache_dir: ${SCALAR_ROOT}/.cache
+  logs_dir: ${SCALAR_ROOT}/logs
+  models_dir: ${SCALAR_ROOT}/models
+
+  # Obsidian vault integration
+  obsidian_vault: ${SCALAR_ROOT}/docs/obsidian_vault  # Symlink location
+
+  # Output directories
+  outputs:
+    reports: ${SCALAR_ROOT}/outputs/reports
+    exports: ${SCALAR_ROOT}/outputs/exports
+    visualizations: ${SCALAR_ROOT}/outputs/visualizations
+
+# ============================================================================
+# MODEL CONFIGURATION
+# ============================================================================
+
+models:
+  # LLM Configuration (Ollama on GPU server)
+  llm:
+    provider: ollama
+    base_url: ${OLLAMA_BASE_URL}  # From .env
+    default_model: llama3.2:3b
+    temperature: 0.7
+    max_tokens: 4096
+    timeout: 120
+
+    # Available models (pre-pulled on GPU server)
+    available:
+      - llama3.2:3b
+      - llama3.1:8b
+      - mistral:7b
+      - mixtral:8x7b
+
+  # Embedding Models
+  embeddings:
+    # BioLORD (biomedical embeddings on GPU server)
+    biolord:
+      base_url: ${BIOLORD_EMBEDDING_URL}  # From .env
+      model: dmis-lab/biolord-2023-c
+      dimension: 768
+      device: cuda
+
+    # Sentence Transformers (local fallback)
+    sentence_transformers:
+      model: all-MiniLM-L6-v2
+      dimension: 384
+      device: cpu
+
+  # NLP Models
+  nlp:
+    # SpaCy for NER and parsing
+    spacy:
+      model: en_core_sci_lg  # Scientific text model
+      pipeline:
+        - ner
+        - parser
+        - tagger
+
+    # BioBERT for biomedical NER
+    biobert:
+      model: dmis-lab/biobert-base-cased-v1.1
+      cache_dir: ${SCALAR_ROOT}/models/biobert
+
+# ============================================================================
+# DATABASE CONFIGURATION
+# ============================================================================
+
+database:
+  # PostgreSQL (primary data store)
+  postgres:
+    host: ${POSTGRES_HOST}
+    port: ${POSTGRES_PORT}
+    database: ${POSTGRES_DB}
+    user: ${POSTGRES_USER}
+    # Password loaded from .env
+    pool_size: 10
+    max_overflow: 20
+    echo: false  # Set true for SQL debugging
+
+  # Redis (cache and task queue)
+  redis:
+    host: ${REDIS_HOST}
+    port: ${REDIS_PORT}
+    # Password loaded from .env
+    db: 0
+    decode_responses: true
+    socket_timeout: 5
+    socket_connect_timeout: 5
+
+  # Elasticsearch (full-text search)
+  elasticsearch:
+    hosts:
+      - http://${ELASTICSEARCH_HOST}:${ELASTICSEARCH_PORT}
+    # Credentials loaded from .env
+    timeout: 30
+    max_retries: 3
+    retry_on_timeout: true
+
+    # Index configuration
+    indices:
+      studies: scalar_studies
+      citations: scalar_citations
+      authors: scalar_authors
+
+  # Qdrant (vector search)
+  qdrant:
+    # SCALAR instance
+    scalar:
+      host: ${QDRANT_HOST}
+      port: ${QDRANT_PORT}
+      # API key loaded from .env if set
+      collections:
+        studies: scalar_studies_embeddings
+        abstracts: scalar_abstracts_embeddings
+        citations: scalar_citations_embeddings
+
+    # Obsidian instance
+    obsidian:
+      host: ${QDRANT_OBSIDIAN_HOST}
+      port: ${QDRANT_OBSIDIAN_PORT}
+      collections:
+        notes: obsidian_notes_embeddings
+        documents: obsidian_docs_embeddings
+
+# ============================================================================
+# ACADEMIC API CONFIGURATION
+# ============================================================================
+
+academic_apis:
+  # Contact email (required for most APIs)
+  contact_email: ${CONTACT_EMAIL}  # From .env
+
+  # User agent string
+  user_agent: "SCALAR/1.0 (Systematic Review Automation; mailto:${CONTACT_EMAIL})"
+
+  # Rate limiting (requests per second)
+  rate_limits:
+    pubmed: 3       # Without key: 3/sec, with key: 10/sec
+    openalex: 10    # Polite pool (with email): 10/sec
+    crossref: 50    # Polite pool (with email): 50/sec
+    arxiv: 3
+    biorxiv: 3
+    medrxiv: 3
+    scopus: 2       # Requires API key
+    wos: 2          # Requires API key
+    semantic_scholar: 10
+
+  # Timeouts (seconds)
+  timeouts:
+    default: 30
+    download: 120   # For PDF downloads
+
+  # Retry configuration
+  retries:
+    max_attempts: 3
+    backoff_factor: 2  # Exponential backoff: 2, 4, 8 seconds
+    retry_on:
+      - 429  # Rate limit exceeded
+      - 500  # Server error
+      - 502  # Bad gateway
+      - 503  # Service unavailable
+      - 504  # Gateway timeout
+
+# ============================================================================
+# API SERVER CONFIGURATION
+# ============================================================================
+
+api:
+  host: ${API_HOST}
+  port: ${API_PORT}
+  workers: ${API_WORKERS}
+  reload: ${API_RELOAD}
+
+  # CORS
+  cors:
+    origins: ${CORS_ORIGINS}  # Comma-separated list
+    allow_credentials: ${CORS_ALLOW_CREDENTIALS}
+    allow_methods: ["GET", "POST", "PUT", "DELETE"]
+    allow_headers: ["*"]
+
+  # Authentication
+  auth:
+    jwt_secret: ${JWT_SECRET_KEY}  # From .env
+    jwt_algorithm: HS256
+    jwt_expiration: 86400  # 24 hours
+
+  # Rate limiting (per user)
+  rate_limit:
+    requests_per_minute: 60
+    burst_size: 10
+
+# ============================================================================
+# MCP SERVER CONFIGURATION
+# ============================================================================
+
+mcp:
+  enabled: ${MCP_SERVER_ENABLED}
+  port: ${MCP_SERVER_PORT}
+
+  # LibreChat integration
+  librechat_url: ${LIBRECHAT_URL}
+
+  # Tool categories
+  tools:
+    enabled: ${MCP_TOOLS_ENABLED}
+
+    # Core tools (always enabled)
+    core:
+      - scalar_search
+      - extract_pico_elements
+      - assess_study_quality
+      - build_citation_network
+
+    # Advanced tools (optional)
+    advanced:
+      - run_meta_analysis
+      - detect_publication_bias
+      - generate_prisma_flowchart
+      - analyze_research_trends
+      - find_citation_gaps
+      - create_presentation
+
+# ============================================================================
+# FEATURE FLAGS
+# ============================================================================
+
+features:
+  # Core features
+  literature_search: ${ENABLE_LITERATURE_SEARCH}
+  llm_integration: ${ENABLE_LLM_INTEGRATION}
+  citation_analysis: ${ENABLE_CITATION_ANALYSIS}
+  meta_analysis: ${ENABLE_META_ANALYSIS}
+  quality_assessment: ${ENABLE_QUALITY_ASSESSMENT}
+  obsidian_integration: ${ENABLE_OBSIDIAN_INTEGRATION}
+  mcp_server: ${ENABLE_MCP_SERVER}
+
+  # Advanced features
+  multi_user_mode: ${ENABLE_MULTI_USER_MODE}
+  experimental_features: ${ENABLE_EXPERIMENTAL_FEATURES}
+  advanced_surveillance: ${ENABLE_ADVANCED_SURVEILLANCE}
+  custom_model_training: ${ENABLE_CUSTOM_MODEL_TRAINING}
+
+# ============================================================================
+# WORKFLOW CONFIGURATION
+# ============================================================================
+
+workflow:
+  # Systematic review stages
+  stages:
+    search:
+      max_results_per_source: 1000
+      deduplication_similarity: 0.95
+
+    screening:
+      title_abstract:
+        llm_assisted: true
+        confidence_threshold: 0.8
+      full_text:
+        require_pdf: false
+        max_file_size_mb: 50
+
+    extraction:
+      pico_extraction: true
+      quality_assessment: true
+      bias_detection: true
+
+    synthesis:
+      meta_analysis: true
+      narrative_synthesis: true
+      forest_plots: true
+
+  # Export formats
+  exports:
+    formats:
+      - prisma
+      - cochrane
+      - jamovi
+      - csv
+      - json
+
+    # PRISMA flowchart
+    prisma:
+      include_flowchart: true
+      auto_populate: true
+
+# ============================================================================
+# LOGGING CONFIGURATION
+# ============================================================================
+
+logging:
+  level: ${LOG_LEVEL}
+  format: ${LOG_FORMAT}  # json or text
+
+  # Log files
+  files:
+    main: ${LOGS_DIR}/scalar.log
+    api: ${LOGS_DIR}/api.log
+    mcp: ${LOGS_DIR}/mcp_server.log
+    database: ${LOGS_DIR}/database.log
+    academic_apis: ${LOGS_DIR}/academic_apis.log
+
+  # Rotation
+  rotation:
+    max_bytes: 10485760  # 10MB
+    backup_count: 5
+
+  # Log to console
+  console: true
+
+# ============================================================================
+# MONITORING CONFIGURATION
+# ============================================================================
+
+monitoring:
+  # Prometheus metrics
+  metrics:
+    enabled: ${ENABLE_METRICS}
+    port: ${PROMETHEUS_PORT}
+    path: /metrics
+
+  # Jaeger tracing
+  tracing:
+    enabled: ${ENABLE_TRACING}
+    agent_host: ${JAEGER_AGENT_HOST}
+    agent_port: ${JAEGER_AGENT_PORT}
+    sampler_type: probabilistic
+    sampler_param: 0.1  # Sample 10% of traces
+
+  # Health checks
+  health:
+    enabled: true
+    path: /health
+    interval: 30  # seconds
+
+# ============================================================================
+# PERFORMANCE TUNING
+# ============================================================================
+
+performance:
+  # Caching
+  cache:
+    ttl:
+      api_responses: 300      # 5 minutes
+      database_queries: 60    # 1 minute
+      embeddings: 86400       # 24 hours
+      llm_responses: 3600     # 1 hour
+
+  # Batch processing
+  batch_sizes:
+    embedding_generation: 32
+    llm_inference: 8
+    database_inserts: 100
+
+  # Concurrency
+  max_concurrent:
+    api_requests: 10
+    database_connections: 20
+    academic_api_calls: 5
+
+# ============================================================================
+# DEVELOPMENT SETTINGS
+# ============================================================================
+
+development:
+  # Environment
+  environment: ${ENVIRONMENT}  # development, staging, production
+
+  # Debug mode
+  debug: ${DEBUG}
+
+  # Auto-reload
+  auto_reload: ${AUTO_RELOAD}
+
+  # Test database
+  test_database_url: ${TEST_DATABASE_URL}
+
+  # Fixtures
+  use_test_fixtures: false
+  fixture_dir: tests/fixtures
