@@ -223,7 +223,7 @@ echo "Registry: $REGISTRY_FILE"
 echo ""
 echo "Next steps:"
 echo "  • Check versions: /tier1-check-versions"
-echo "  • Update projects: /tier1-update-all"
+echo "  • Update projects: /tier1-update-surgical"
 echo ""
 ```
 

@@ -1,0 +1,47 @@
+{
+  "version": "1.0.0",
+  "last_updated": "2025-10-24T00:00:00Z",
+  "updates": [
+    {
+      "id": "agent-failure-reporting-protocol-v1",
+      "version": "1.0.0",
+      "date": "2025-10-24",
+      "description": "Agent Failure Reporting Protocol - prevents simulation code when agents encounter blockers (EPIC-013 fix)",
+      "priority": "high",
+      "source": "EPIC-013 post-mortem analysis",
+      "components": [
+        {
+          "type": "append_section",
+          "target": ".claude/agent_briefings/backend_implementation.md",
+          "marker": "## Post-Implementation Checklist",
+          "section_file": "implementation/updates/agent-failure-protocol-backend.md",
+          "idempotent_check": "grep -q 'BLOCKER DETECTED' {target}",
+          "description": "Add blocker reporting protocol to backend briefing"
+        },
+        {
+          "type": "append_section",
+          "target": ".claude/agent_briefings/project_architecture.md",
+          "marker": "## Summary",
+          "section_file": "implementation/updates/agent-failure-protocol-architecture.md",
+          "idempotent_check": "grep -q 'BLOCKER DETECTED' {target}",
+          "description": "Add blocker reporting protocol to architecture briefing"
+        },
+        {
+          "type": "copy_if_missing",
+          "target": "tools/detect_simulation_code.py",
+          "source": "template/tools/detect_simulation_code.py",
+          "idempotent_check": "test -f {target}",
+          "description": "Add simulation detection script"
+        }
+      ],
+      "validation": {
+        "required_keywords": ["BLOCKER DETECTED", "No Improvisation When Blocked", "_simulate_", "_mock_", "_fake_"],
+        "files_to_check": [
+          ".claude/agent_briefings/backend_implementation.md",
+          ".claude/agent_briefings/project_architecture.md",
+          "tools/detect_simulation_code.py"
+        ]
+      }
+    }
+  ]
+}

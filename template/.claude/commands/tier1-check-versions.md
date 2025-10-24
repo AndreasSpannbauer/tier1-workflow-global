@@ -144,8 +144,8 @@ if outdated:
         print(f"  • {name}")
     print("")
     print("To update all projects:")
-    print("  /tier1-update-all --dry-run  (preview changes)")
-    print("  /tier1-update-all            (apply updates)")
+    print("  /tier1-update-surgical --dry-run  (preview changes)")
+    print("  /tier1-update-surgical            (apply updates)")
     print("")
 
 if missing:
@@ -229,4 +229,4 @@ echo "======================================================================"
 
 **Fast:** No file modifications, just reads and compares
 
-**Use before updates:** Run this before `/tier1-update-all` to see what needs updating
+**Use before updates:** Run this before `/tier1-update-surgical` to see what needs updating

@@ -253,7 +253,7 @@ python3 tools/workflow_utilities_v6/phase7_prepare_postmortem.py \
 **Commands That Work Across All Projects**:
 - `/tier1-init-claude-md` - Insert workflow documentation into CLAUDE.md
 - `/tier1-check-versions` - Check which projects need updates
-- `/tier1-update-all` - Batch update workflow commands
+- `/tier1-update-surgical` - Apply surgical updates to workflow
 - `/tier1-registry-sync` - Sync project registry
 
 **Usage in email_management_system**:

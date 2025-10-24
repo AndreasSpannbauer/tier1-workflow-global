@@ -18,7 +18,7 @@ The project registry enables:
 **Commands:**
 - `/tier1-registry-sync` - Discover and register projects
 - `/tier1-check-versions` - Check which projects are outdated
-- `/tier1-update-all` - Update all projects in parallel
+- `/tier1-update-surgical` - Apply surgical updates to all projects
 
 ## Quick Start
 
@@ -33,7 +33,7 @@ Shows which projects are up to date, outdated, or missing.
 ### 2. Preview Updates (Dry Run)
 
 ```bash
-/tier1-update-all --dry-run
+/tier1-update-surgical --dry-run
 ```
 
 Shows what would be updated without modifying files.
@@ -41,10 +41,10 @@ Shows what would be updated without modifying files.
 ### 3. Apply Updates
 
 ```bash
-/tier1-update-all
+/tier1-update-surgical
 ```
 
-Updates all outdated projects in parallel using subagents.
+Applies surgical updates to all projects in parallel.
 
 ## Registry Structure
 
@@ -140,46 +140,47 @@ Updates all outdated projects in parallel using subagents.
 
 ---
 
-### `/tier1-update-all`
+### `/tier1-update-surgical`
 
-**Purpose:** Update workflow files across all projects in parallel
+**Purpose:** Apply surgical updates to workflow files across all projects
 
 **Features:**
 - Deploys one subagent per project for parallel execution
-- Automatic backup before update
+- Preserves customizations (only adds missing content)
+- Idempotent operations (safe to run multiple times)
+- Tracks applied updates in project registry
 - Dry run mode for safety
-- Project filtering for selective updates
-- Verification after update
 
 **Usage:**
 ```bash
 # Preview changes (dry run)
-/tier1-update-all --dry-run
+/tier1-update-surgical --dry-run
 
 # Update all projects
-/tier1-update-all
+/tier1-update-surgical
 
 # Update specific project
-/tier1-update-all --project=whisper_hotkeys
+/tier1-update-surgical --project=whisper_hotkeys
 
-# Use custom template
-/tier1-update-all --template=~/custom-workflow.md
+# Apply specific update only
+/tier1-update-surgical --update-id=agent-failure-reporting-protocol-v1
 ```
 
 **Arguments:**
 - `--dry-run` - Preview changes without modifying files
 - `--project=NAME` - Update only specified project
-- `--template=PATH` - Use custom template file
+- `--update-id=ID` - Apply only specified update
 
 **Parallel Execution:**
 - ALL subagents deployed in SINGLE message
-- Each subagent updates one project
+- Each subagent applies updates to one project
 - Results aggregated after completion
 - Much faster than sequential updates
 
 **Safety:**
-- Creates `.backup-<timestamp>` before each update
-- Verifies update success via hash check
+- Idempotent checks prevent duplicate applications
+- Preserves all existing content
+- Only adds missing sections/files
 - Dry run mode for risk-free preview
 - Isolated execution (no cross-project conflicts)
 
@@ -197,8 +198,8 @@ Results Summary:
 
 ======================================================================
 Total projects processed: 4
-  Updated: 3
-  Up to date: 1
+  Updates applied: 3
+  Already applied: 1
   Failed: 0
 ======================================================================
 ```
@@ -207,17 +208,18 @@ Total projects processed: 4
 
 ## Workflow Update Scenarios
 
-### Scenario 1: Template Improvement (ADR-012 Example)
+### Scenario 1: Surgical Update (Agent Failure Protocol Example)
 
-**Situation:** You improved `execute-workflow.md` with two-phase validation
+**Situation:** You want to add the agent failure reporting protocol to all projects
 
 **Steps:**
-1. Edit template in `tier1_workflow_global/template/.claude/commands/execute-workflow.md`
-2. Test in one project: `/tier1-update-all --dry-run --project=whisper_hotkeys`
-3. Review changes, adjust if needed
-4. Apply to all: `/tier1-update-all`
+1. Define update in `update_definitions.json`
+2. Create content fragments in `updates/` directory
+3. Test on one project: `/tier1-update-surgical --dry-run --project=whisper_hotkeys`
+4. Review changes, adjust if needed
+5. Apply to all: `/tier1-update-surgical --update-id=agent-failure-reporting-protocol-v1`
 
-**Result:** All 4 projects updated in ~30 seconds (parallel execution)
+**Result:** All projects updated with new protocol in ~30 seconds (parallel execution), customizations preserved
 
 ---
 
@@ -304,14 +306,14 @@ SEARCH_PATHS=(
 
 ## Safety & Best Practices
 
-✅ **Always dry run first:** `/tier1-update-all --dry-run`
+✅ **Always dry run first:** `/tier1-update-surgical --dry-run`
 ✅ **Test on one project:** `--project=test_project`
-✅ **Review diffs:** Check what changed before applying
-✅ **Backup exists:** Original file saved with timestamp
+✅ **Review changes:** Check what will be added before applying
+✅ **Idempotent updates:** Safe to run multiple times
 ✅ **Git commit separately:** Commit changes per project or in batch
 
-⚠️ **Custom modifications:** Projects with `has_custom_modifications: true` are still updated (template is base layer)
-⚠️ **V6 variants:** May need special handling beyond base template
+✅ **Customizations preserved:** Surgical updates only add missing content
+✅ **Tracked updates:** Registry tracks what's been applied
 ⚠️ **Git conflicts:** If projects have uncommitted changes, update may conflict
 
 ---
@@ -335,21 +337,21 @@ SEARCH_PATHS=(
 
 ## Comparison: Before vs After
 
-**Before (ADR-012 rollout):**
+**Before (manual updates):**
 ```bash
 # Manual approach - deploy 5 subagents
 # Claude Code session, manually specify each project
-# ~10 minutes total
+# ~10 minutes total, risk of inconsistency
 ```
 
-**After (with registry):**
+**After (with surgical updates):**
 ```bash
-/tier1-check-versions          # See what's outdated
-/tier1-update-all --dry-run    # Preview changes
-/tier1-update-all              # Apply in parallel (~30 sec)
+/tier1-check-versions               # See what's pending
+/tier1-update-surgical --dry-run    # Preview changes
+/tier1-update-surgical              # Apply in parallel (~30 sec)
 ```
 
-**Result:** 20x faster, 100% consistent, zero manual tracking
+**Result:** 20x faster, 100% consistent, customizations preserved, tracked updates
 
 ---
 

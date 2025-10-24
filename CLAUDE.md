@@ -61,8 +61,6 @@ Use the **surgical update system** to apply updates to deployed projects:
 - ✅ **Intelligent** - Respects project-specific improvements
 - ✅ **Parallel** - Updates multiple projects simultaneously
 
-**❌ DO NOT use `/tier1-update-all`** - This command blindly overwrites files and loses local improvements. It exists only for emergency full replacement scenarios.
-
 ### 3. Sync Project Registry
 
 Keep track of all Tier1 deployments:
@@ -233,7 +231,6 @@ To create additional updates:
 
 ### Updates
 - `/tier1-update-surgical` - **DEFAULT: Surgical updates to projects**
-- `/tier1-update-all` - ⚠️ Emergency only: Overwrites files
 - `/tier1-check-versions` - Check workflow versions across projects
 
 ### Registry

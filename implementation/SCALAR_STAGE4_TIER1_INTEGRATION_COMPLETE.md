@@ -61,7 +61,7 @@ Stage 4 successfully integrated the tier1 workflow system into SCALAR project at
 - `spec-master.md` - Master specification creation
 - `refine-spec.md` - Specification refinement
 - `task-create.md`, `task-get.md`, `task-list.md`, `task-update.md` - Task management
-- `tier1-check-versions.md`, `tier1-init-claude-md.md`, `tier1-registry-sync.md`, `tier1-update-all.md` - Tier1 utilities
+- `tier1-check-versions.md`, `tier1-init-claude-md.md`, `tier1-registry-sync.md`, `tier1-update-surgical.md` - Tier1 utilities
 
 ### 2. Agent Briefing Documents (3 files, 10,012 words)
 
@@ -279,7 +279,7 @@ cd ~/SCALAR
 - `/tier1-check-versions` - Check tier1 workflow versions
 - `/tier1-init-claude-md` - Initialize project CLAUDE.md
 - `/tier1-registry-sync` - Sync with project registry
-- `/tier1-update-all` - Update all tier1 projects
+- `/tier1-update-surgical` - Apply surgical updates to tier1 projects
 
 ### Agent Briefing System
 

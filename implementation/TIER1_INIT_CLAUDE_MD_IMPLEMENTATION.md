@@ -311,7 +311,7 @@ This command complements the existing Tier1 commands:
 
 1. **tier1-registry-sync** - Discover and register projects
 2. **tier1-check-versions** - Check which projects need updates
-3. **tier1-update-all** - Update execute-workflow.md across projects
+3. **tier1-update-surgical** - Apply surgical updates across projects
 4. **tier1-init-claude-md** - Update CLAUDE.md documentation (NEW)
 
 ### Workflow
@@ -323,9 +323,9 @@ This command complements the existing Tier1 commands:
 # Step 2: Check which projects need workflow updates
 /tier1-check-versions
 
-# Step 3: Update workflow commands
-/tier1-update-all --dry-run
-/tier1-update-all
+# Step 3: Apply surgical updates
+/tier1-update-surgical --dry-run
+/tier1-update-surgical
 
 # Step 4: Update CLAUDE.md documentation
 cd ~/coding_projects/my_project
@@ -369,7 +369,7 @@ cd ~/coding_projects/my_project
 
 ### Registry Integration
 
-Consider adding to `/tier1-update-all`:
+Consider adding to `/tier1-update-surgical`:
 - Optional flag to also update CLAUDE.md sections
 - Batch update across all registered projects
 - Report which projects need CLAUDE.md updates
