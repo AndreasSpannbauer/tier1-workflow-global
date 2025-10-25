@@ -127,6 +127,10 @@ class UpdateApplier:
                 self._apply_copy_if_missing()
             elif component_type == "patch_line":
                 self._apply_patch_line()
+            elif component_type == "patch_execute_workflow":
+                self._apply_patch_execute_workflow()
+            elif component_type == "merge_json":
+                self._apply_merge_json()
             else:
                 raise ValueError(f"Unknown component type: {component_type}")
 
@@ -189,7 +193,7 @@ class UpdateApplier:
         section_content += "\n"
 
         if self.dry_run:
-            print(f"[DRY RUN] Would insert {len(section_content)} chars before line {marker_index}")
+            print(f"[DRY RUN] Would insert {len(section_content)} chars before line {marker_index}", file=sys.stderr)
             return
 
         # Insert section before marker
@@ -233,7 +237,7 @@ class UpdateApplier:
             content += "\n"
 
         if self.dry_run:
-            print(f"[DRY RUN] Would insert after line {pattern_index}: {content.strip()}")
+            print(f"[DRY RUN] Would insert after line {pattern_index}: {content.strip()}", file=sys.stderr)
             return
 
         # Insert after pattern line
@@ -269,7 +273,7 @@ class UpdateApplier:
         target_path.parent.mkdir(parents=True, exist_ok=True)
 
         if self.dry_run:
-            print(f"[DRY RUN] Would copy {source_path} to {target_path}")
+            print(f"[DRY RUN] Would copy {source_path} to {target_path}", file=sys.stderr)
             return
 
         # Copy file
@@ -316,7 +320,7 @@ class UpdateApplier:
             new_line += "\n"
 
         if self.dry_run:
-            print(f"[DRY RUN] Would replace line {match_index}: {old_line.strip()} -> {new_line.strip()}")
+            print(f"[DRY RUN] Would replace line {match_index}: {old_line.strip()} -> {new_line.strip()}", file=sys.stderr)
             return
 
         # Replace line
@@ -325,6 +329,117 @@ class UpdateApplier:
         # Write back
         with open(target_path, "w", encoding="utf-8") as f:
             f.writelines(lines)
+
+    def _apply_patch_execute_workflow(self) -> None:
+        """
+        Apply patch_execute_workflow update type.
+
+        Performs search-and-replace operations on the target file.
+        This is similar to patch_line but supports multi-line replacements.
+        """
+        target = self.component["target"]
+        operations = self.component.get("operations", [])
+
+        target_path = self.project_path / target
+
+        if not target_path.exists():
+            raise FileNotFoundError(f"Target file not found: {target_path}")
+
+        # Read target file as a single string (not lines)
+        with open(target_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        original_content = content
+
+        # Apply each operation
+        for operation in operations:
+            search = operation.get("search", "")
+            replace = operation.get("replace", "")
+
+            if not search:
+                raise ValueError("Search pattern is required for patch_execute_workflow")
+
+            # Count occurrences
+            count = content.count(search)
+
+            if count == 0:
+                # Pattern not found - this might be okay if already patched
+                # Check if the idempotent check would pass
+                continue
+            elif count > 1:
+                raise ValueError(
+                    f"Ambiguous match: search pattern appears {count} times. "
+                    "Make pattern more specific."
+                )
+
+            # Replace (exactly once)
+            content = content.replace(search, replace, 1)
+
+        if self.dry_run:
+            print(f"[DRY RUN] Would apply {len(operations)} search-replace operations", file=sys.stderr)
+            return
+
+        # Only write if content changed
+        if content != original_content:
+            with open(target_path, "w", encoding="utf-8") as f:
+                f.write(content)
+
+    def _apply_merge_json(self) -> None:
+        """
+        Apply merge_json update type.
+
+        Merges JSON data into the target file. If target doesn't exist,
+        creates it with the merge data.
+        """
+        target = self.component["target"]
+        merge_data = self.component.get("merge_data", {})
+
+        target_path = self.project_path / target
+
+        # Create parent directory if needed
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+
+        # Load existing JSON or start with empty dict
+        if target_path.exists():
+            with open(target_path, "r", encoding="utf-8") as f:
+                existing_data = json.load(f)
+        else:
+            existing_data = {}
+
+        # Deep merge the data
+        merged_data = self._deep_merge(existing_data, merge_data)
+
+        if self.dry_run:
+            print(f"[DRY RUN] Would merge JSON data into {target_path}", file=sys.stderr)
+            return
+
+        # Write merged JSON
+        with open(target_path, "w", encoding="utf-8") as f:
+            json.dump(merged_data, f, indent=2)
+            f.write("\n")  # Add trailing newline
+
+    def _deep_merge(self, base: dict, updates: dict) -> dict:
+        """
+        Deep merge two dictionaries.
+
+        Args:
+            base: Base dictionary
+            updates: Updates to merge into base
+
+        Returns:
+            Merged dictionary (new dict, doesn't modify inputs)
+        """
+        result = base.copy()
+
+        for key, value in updates.items():
+            if key in result and isinstance(result[key], dict) and isinstance(value, dict):
+                # Recursively merge nested dicts
+                result[key] = self._deep_merge(result[key], value)
+            else:
+                # Overwrite or add new key
+                result[key] = value
+
+        return result
 
 
 def main() -> None:
