@@ -119,6 +119,84 @@
         "After deployment, verify .workflow/transcript_path.txt is created when slash commands run",
         "This enables full conversation history in post-mortem reports for better workflow analysis"
       ]
+    },
+    {
+      "id": "tier1-constitution-v1",
+      "version": "1.0.0",
+      "date": "2025-10-25",
+      "description": "Add lightweight 6-article constitution with git automation",
+      "priority": "high",
+      "components": [
+        {
+          "type": "copy_if_missing",
+          "target": ".claude/constitution.md",
+          "source": "template/.claude/constitution.md",
+          "idempotent_check": "test -f {target}",
+          "description": "Add Tier1 constitution document"
+        },
+        {
+          "type": "copy_if_missing",
+          "target": "tools/validate_constitutional_compliance.py",
+          "source": "template/tools/validate_constitutional_compliance.py",
+          "idempotent_check": "test -f {target}",
+          "description": "Add constitutional compliance validator"
+        },
+        {
+          "type": "copy_if_missing",
+          "target": "tools/git_workflow_commit.py",
+          "source": "template/tools/git_workflow_commit.py",
+          "idempotent_check": "test -f {target}",
+          "description": "Add git workflow automation script"
+        },
+        {
+          "type": "copy_if_missing",
+          "target": "tools/generate_commit_message.py",
+          "source": "template/tools/generate_commit_message.py",
+          "idempotent_check": "test -f {target}",
+          "description": "Add commit message generator"
+        },
+        {
+          "type": "copy_if_missing",
+          "target": "tools/pre-commit-hook.sh",
+          "source": "template/tools/pre-commit-hook.sh",
+          "idempotent_check": "test -f {target}",
+          "description": "Add pre-commit hook template"
+        },
+        {
+          "type": "append_section",
+          "target": "CLAUDE.md",
+          "marker": "## 🎯 Primary Use Cases",
+          "section_file": "implementation/updates/tier1-constitution-v1/claude-md-section.md",
+          "idempotent_check": "grep -q 'Constitutional Compliance' {target}",
+          "description": "Add constitution documentation to CLAUDE.md"
+        }
+      ],
+      "validation": {
+        "required_files": [
+          ".claude/constitution.md",
+          "tools/validate_constitutional_compliance.py",
+          "tools/git_workflow_commit.py",
+          "tools/generate_commit_message.py",
+          "tools/pre-commit-hook.sh"
+        ],
+        "required_keywords": [
+          "Article I",
+          "Article II",
+          "Article III",
+          "Constitutional Compliance"
+        ],
+        "files_to_check": [
+          ".claude/constitution.md",
+          "CLAUDE.md"
+        ]
+      },
+      "notes": [
+        "This update adds the Tier1 6-article constitution to projects",
+        "Pre-commit hook blocks on Article III violations (simulation code)",
+        "Other articles generate warnings only (not blocking)",
+        "Git workflow automation scripts enable WIP commits before/after workflows",
+        "After deployment, install hook: cp tools/pre-commit-hook.sh .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit"
+      ]
     }
   ]
 }

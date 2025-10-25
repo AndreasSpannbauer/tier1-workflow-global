@@ -29,8 +29,12 @@
       "applied_updates": [],
       "template_hash": "8b2ad7e",
       "has_custom_modifications": true,
-      "custom_modifications": {"workflow_variant": "v6-mcp"},
-      "custom_commands": ["w-workflow-v6-mcp"],
+      "custom_modifications": {
+        "workflow_variant": "v6-mcp"
+      },
+      "custom_commands": [
+        "w-workflow-v6-mcp"
+      ],
       "notes": "Uses V6 MCP workflow variant with custom Step 0 preflight"
     },
     {
@@ -40,8 +44,10 @@
       "installed_date": "2025-10-19",
       "last_verified": "2025-10-21",
       "workflow_version": "1.0.0",
-      "last_updated": "2025-10-21T16:30:00Z",
-      "applied_updates": [],
+      "last_updated": "2025-10-24T19:19:58.294629",
+      "applied_updates": [
+        "transcript-path-hook-v1"
+      ],
       "template_hash": "8b2ad7e",
       "has_custom_modifications": false,
       "custom_modifications": {},
@@ -55,8 +61,10 @@
       "installed_date": "2025-10-19",
       "last_verified": "2025-10-21",
       "workflow_version": "1.0.0",
-      "last_updated": "2025-10-21T16:30:00Z",
-      "applied_updates": [],
+      "last_updated": "2025-10-24T19:19:58.488625",
+      "applied_updates": [
+        "transcript-path-hook-v1"
+      ],
       "template_hash": "8b2ad7e",
       "has_custom_modifications": false,
       "custom_modifications": {},
