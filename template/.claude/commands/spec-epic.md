@@ -17,91 +17,189 @@ If style not available, continue with default style.
 
 ## Round 1: Problem Understanding
 
-Ask these 4 questions using plain text format:
+**CRITICAL:** Provide intelligent analysis and recommendations, NOT just naked questions.
+
+### Your Task:
+
+1. **Analyze the epic title** (`$ARGUMENTS`) - what does it suggest?
+2. **For each question**, provide:
+   - Context (why this matters)
+   - 3-4 suggested options (specific to the epic title)
+   - Your recommendation
+3. **Then** let user answer
+
+### Output Format:
+
+Start with epic analysis:
 
 ```markdown
-**Round 1: Problem Understanding (4 questions)**
+## Round 1: Problem Understanding
 
-Please provide your answers below each question:
+I see you want to create: **"$ARGUMENTS"**
 
-**1. Pain Point:** What user pain point does this solve?
+**What this epic suggests:**
+- [3-4 bullet points analyzing what the epic title indicates]
+- [Problem domain, technical approach, likely goals]
+- [Key ambiguities that need clarification]
 
-**Your answer:**
+I'll now ask 4 questions with context and recommendations for each.
 
-**2. Workaround:** What is the current manual workaround?
-
-**Your answer:**
-
-**3. Desired:** What is the desired automated behavior?
-
-**Your answer:**
-
-**4. Impact:** What is the expected impact? (users affected, time saved, business value)
-
-**Your answer:**
+---
 ```
 
-[Wait for user responses - store answers as: pain_point, current_workaround, desired_behavior, expected_impact]
+Then for each question, follow this pattern:
+
+```markdown
+### Question 1: Pain Point
+
+**What user pain point does this solve?**
+
+**Why this matters:** Understanding the pain point ensures we're solving a real problem, not building something nobody needs.
+
+**Based on "$ARGUMENTS", the pain point might be:**
+- Option A: [Specific pain related to the title]
+- Option B: [Another specific pain]
+- Option C: [Third possibility]
+
+**My recommendation:** [Your assessment of most likely pain point]
+
+**Your answer:**
+[Wait for user response]
+
+---
+```
+
+Repeat this intelligent pattern for all 4 questions:
+1. **Pain Point** (as above)
+2. **Current Workaround** - Ask "What is the current manual workaround?" with context about why understanding current workflow matters, suggest specific workarounds based on the epic title, recommend most likely workaround
+3. **Desired Behavior** - Ask "What is the desired automated behavior?" with context about automation scenarios, suggest specific desired outcomes, recommend ideal automation approach
+4. **Expected Impact** - Ask "What is the expected impact? (users affected, time saved, business value)" with context about measuring value, suggest specific impact estimates (users, time, business metrics), recommend expected impact range
+
+At the end:
+
+```markdown
+---
+
+**Once you've answered all 4 questions, I'll proceed to Round 2: Scope Definition.**
+```
+
+[Store answers as: pain_point, current_workaround, desired_behavior, expected_impact]
 
 ---
 
 ## Round 2: Scope Definition
 
-Based on Round 1 answers, ask these 5 questions using plain text:
+**Based on your Round 1 answers, let me analyze the technical scope.**
+
+### Your Task:
+
+Analyze Round 1 answers and provide intelligent context for scope questions.
+
+### Output Format:
 
 ```markdown
-**Round 2: Scope Definition (5 questions)**
+## Round 2: Scope Definition
 
-Please provide your answers below each question:
+Based on your answers, here's my analysis of the technical scope:
+- [Synthesize what Round 1 answers suggest about scope]
+- [Identify likely components/integrations needed]
+- [Flag potential complexity or risks]
 
-**5. Integrations:** Which existing components will this integrate with?
+Now for 5 scope questions with recommendations:
+
+---
+
+### Question 5: Integrations
+
+**Which existing components will this integrate with?**
+
+**Why this matters:** Integration points are often the highest-risk areas - they determine complexity and potential breaking changes.
+
+**Given "$ARGUMENTS" and your pain point of "[pain_point]", likely integrations:**
+- [Component/system 1]: [Why it's relevant]
+- [Component/system 2]: [Why it's relevant]
+- [Component/system 3]: [Why it's relevant]
+
+**My recommendation:** [Which integrations are critical vs nice-to-have]
 
 **Your answer:**
+[Wait for user response]
 
-**6. New Components:** What new components are needed?
-
-**Your answer:**
-
-**7. Data Sources:** What data sources are involved? (databases, APIs, files, etc.)
-
-**Your answer:**
-
-**8. Edge Cases:** What are the edge cases to consider?
-
-**Your answer:**
-
-**9. Non-Goals:** What are the non-goals? (explicitly out of scope)
-
-**Your answer:**
+---
 ```
 
-[Wait for user responses - store answers as: existing_components, new_components, data_sources, edge_cases, non_goals]
+Continue this pattern for questions 6-9:
+- **Question 6: New Components** - Ask "What new components are needed?" with context about component design principles, suggest specific new components based on integration analysis, recommend component architecture approach
+- **Question 7: Data Sources** - Ask "What data sources are involved? (databases, APIs, files, etc.)" with context about data flow complexity, suggest likely data sources based on components, recommend data access patterns
+- **Question 8: Edge Cases** - Ask "What are the edge cases to consider?" with context about robustness, predict specific edge cases from scope, recommend which edge cases to handle vs defer
+- **Question 9: Non-Goals** - Ask "What are the non-goals? (explicitly out of scope)" with context about scope creep prevention, suggest likely scope boundaries, recommend what to defer to future epics
+
+At the end:
+
+```markdown
+---
+
+**Once you've answered all 5 questions, I'll proceed to Round 3: Technical Constraints.**
+```
+
+[Store answers as: existing_components, new_components, data_sources, edge_cases, non_goals]
 
 ---
 
 ## Round 3: Technical Constraints
 
-Ask these 3 questions using plain text:
+**Now let's define the technical constraints and requirements.**
+
+### Your Task:
+
+Based on Rounds 1 & 2, analyze technical constraints.
+
+### Output Format:
 
 ```markdown
-**Round 3: Technical Constraints (3 questions)**
+## Round 3: Technical Constraints
 
-Please provide your answers below each question:
+Given the scope we've defined, here are the technical considerations:
+- [Analyze performance implications based on data sources and components]
+- [Identify security concerns based on integrations and data]
+- [Note compatibility requirements based on existing components]
 
-**10. Performance:** What are the performance requirements? (latency, throughput, scale)
+Final 3 questions with recommendations:
+
+---
+
+### Question 10: Performance
+
+**What are the performance requirements? (latency, throughput, scale)**
+
+**Why this matters:** Performance requirements drive architecture decisions (caching, async processing, database choice, etc.).
+
+**For "$ARGUMENTS", performance might need:**
+- Latency: [Estimate based on use case - e.g., <100ms for UI, <1s for background]
+- Throughput: [Estimate based on usage - e.g., 100 req/sec, 1000 events/min]
+- Scale: [Estimate based on user base - e.g., 10 concurrent users, 1000 records]
+
+**My recommendation:** [Suggested performance targets with rationale based on pain point and expected impact]
 
 **Your answer:**
+[Wait for user response]
 
-**11. Security:** What are the security considerations? (auth, data protection, compliance)
-
-**Your answer:**
-
-**12. Compatibility:** What are compatibility constraints? (browsers, platforms, APIs, dependencies)
-
-**Your answer:**
+---
 ```
 
-[Wait for user responses - store answers as: performance_requirements, security_considerations, compatibility_constraints]
+Continue for questions 11-12:
+- **Question 11: Security** - Ask "What are the security considerations? (auth, data protection, compliance)" with context about security trade-offs, suggest specific security requirements based on data sources, recommend security measures appropriate to risk level
+- **Question 12: Compatibility** - Ask "What are compatibility constraints? (browsers, platforms, APIs, dependencies)" with context about compatibility impact, suggest specific compatibility requirements based on integrations, recommend compatibility approach
+
+At the end:
+
+```markdown
+---
+
+**Once you've answered all 3 questions, I'll proceed to consult the workflow pattern library and past epics.**
+```
+
+[Store answers as: performance_requirements, security_considerations, compatibility_constraints]
 
 ---
 
@@ -318,6 +416,132 @@ echo ""
 
 ---
 
+## Round 4: Complexity Assessment & Mode Recommendation
+
+**Now analyze the epic complexity to recommend direct vs planning mode.**
+
+### Evaluation Criteria:
+
+Assess each factor (low/medium/high):
+
+1. **Architectural Novelty** - Does this introduce new patterns not in the codebase?
+   - Low: Follows existing patterns (CRUD, service methods, standard components)
+   - Medium: Adapts existing patterns with minor variations
+   - High: Introduces novel architecture or patterns
+
+2. **Cross-Domain Impact** - How many domains affected and how tightly coupled?
+   - Low: Single domain (backend only, frontend only, database only)
+   - Medium: 2 domains with loose coupling
+   - High: 3+ domains with tight coupling requiring careful coordination
+
+3. **Risk Level** - What's the risk if implementation goes wrong?
+   - Low: Routine features, easy to rollback, minimal user impact
+   - Medium: Important features, moderate rollback complexity
+   - High: Security implications, external integrations, breaking changes, performance-critical
+
+4. **Established Patterns** - Are there clear examples in the codebase?
+   - High: Multiple similar examples exist (e.g., 5+ CRUD endpoints)
+   - Medium: Some similar code exists but needs adaptation
+   - Low: No similar patterns, need to establish new conventions
+
+### Complexity Score Calculation:
+
+```
+Score = 0
+- If architectural_novelty = high: +3
+- If architectural_novelty = medium: +1.5
+- If cross_domain = high: +3
+- If cross_domain = medium: +1.5
+- If risk_level = high: +3
+- If risk_level = medium: +1.5
+- If established_patterns = low: +3
+- If established_patterns = medium: +1.5
+
+Complexity Score = Score (0-12, normalize to 0-10)
+```
+
+### Mode Recommendation Logic:
+
+```
+If Complexity Score >= 6.5: RECOMMEND planning
+If Complexity Score < 6.5: RECOMMEND direct
+```
+
+**Planning mode triggers (any of these = planning):**
+- Architectural novelty = high
+- Cross-domain = high AND risk_level = medium+
+- Risk_level = high
+- Established_patterns = low AND cross-domain = medium+
+
+**Direct mode appropriate (all must be true):**
+- Architectural novelty = low or medium
+- Cross-domain = low or (medium AND risk_level = low)
+- Risk_level = low or medium
+- Established_patterns = medium or high
+
+### Output Format:
+
+Analyze the epic and display:
+
+```markdown
+## Complexity Assessment
+
+Based on the epic requirements, here's my complexity analysis:
+
+**Architectural Novelty:** [low|medium|high]
+[1-2 sentences explaining why - reference specific patterns or novelty]
+
+**Cross-Domain Impact:** [low|medium|high]
+[1-2 sentences - which domains affected, coupling level]
+
+**Risk Level:** [low|medium|high]
+[1-2 sentences - security/external/breaking change concerns]
+
+**Established Patterns:** [low|medium|high]
+[1-2 sentences - reference existing similar code or lack thereof]
+
+---
+
+**Complexity Score:** [X.X]/10
+
+**Recommended Mode:** [direct|planning] [✅|⚠️]
+
+**Reasoning:**
+[2-3 sentences explaining the recommendation based on the factors above]
+
+{% if planning mode %}
+**Why planning mode:**
+- [Primary reason from factors]
+- [Secondary reason]
+- Suggests generating detailed implementation plan (file-tasks.md) before execution
+
+**You'll need to:**
+1. Complete architecture.md
+2. Generate detailed file-tasks.md (use /output-style Spec Architect + ask for Phase 5.5)
+3. Then run /execute-workflow --planning (or let it auto-select)
+{% else %}
+**Why direct mode:**
+- [Primary reason from factors]
+- [Secondary reason]
+- Agents can implement directly from briefings and architecture
+
+**You'll need to:**
+1. Complete architecture.md
+2. Run /execute-workflow --direct (or let it auto-select, no file-tasks.md needed)
+{% endif %}
+```
+
+Store the following for spec generation:
+- `recommended_mode`: "direct" or "planning"
+- `estimated_complexity`: score (0-10)
+- `architectural_novelty`: "low" | "medium" | "high"
+- `cross_domain`: "low" | "medium" | "high"
+- `risk_level`: "low" | "medium" | "high"
+- `established_patterns`: "low" | "medium" | "high"
+- `mode_reasoning`: your 2-3 sentence reasoning
+
+---
+
 ## Generate Epic ID
 
 Use bash to generate the next epic ID from the registry:
@@ -408,6 +632,13 @@ Substitute the following variables (use sed or manual string replacement):
 - `{{ security_considerations }}` → Answer from Question 11
 - `{{ compatibility_constraints }}` → Answer from Question 12
 - `{{ core_features }}` → Synthesize from answers (2-3 bullet points)
+- `{{ recommended_mode }}` → "direct" or "planning" (from Round 4)
+- `{{ estimated_complexity }}` → Complexity score 0-10 (from Round 4)
+- `{{ architectural_novelty }}` → "low"|"medium"|"high" (from Round 4)
+- `{{ cross_domain }}` → "low"|"medium"|"high" (from Round 4)
+- `{{ risk_level }}` → "low"|"medium"|"high" (from Round 4)
+- `{{ established_patterns }}` → "low"|"medium"|"high" (from Round 4)
+- `{{ mode_reasoning }}` → 2-3 sentence reasoning for mode recommendation (from Round 4)
 
 Write the completed spec to `${EPIC_DIR}/spec.md`
 

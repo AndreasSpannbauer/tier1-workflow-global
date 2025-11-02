@@ -6,6 +6,15 @@ status: backlog
 priority: {{ priority }}
 created: {{ created }}
 domain: {{ domain }}
+recommended_mode: {{ recommended_mode }}
+estimated_complexity: {{ estimated_complexity }}
+complexity_factors:
+  architectural_novelty: {{ architectural_novelty }}
+  cross_domain: {{ cross_domain }}
+  risk_level: {{ risk_level }}
+  established_patterns: {{ established_patterns }}
+mode_reasoning: |
+  {{ mode_reasoning }}
 ---
 
 # {{ epic_id }}: {{ title }}
@@ -86,6 +95,39 @@ domain: {{ domain }}
 ## Out of Scope
 
 {{ non_goals }}
+
+## Implementation Strategy
+
+**Recommended Mode:** `{{ recommended_mode }}` {% if recommended_mode == "planning" %}⚠️{% else %}✅{% endif %}
+
+**Complexity Score:** {{ estimated_complexity }}/10
+
+**Complexity Factors:**
+- Architectural novelty: {{ architectural_novelty }}
+- Cross-domain impact: {{ cross_domain }}
+- Risk level: {{ risk_level }}
+- Established patterns: {{ established_patterns }}
+
+**Reasoning:**
+{{ mode_reasoning }}
+
+{% if recommended_mode == "planning" %}
+**Planning mode recommended because:**
+- Requires detailed design review before implementation
+- Multiple valid approaches need evaluation
+- High-risk changes requiring careful analysis
+- Novel architectural patterns not yet established
+
+**Next step:** Complete architecture.md and generate detailed implementation plan (file-tasks.md)
+{% else %}
+**Direct mode recommended because:**
+- Follows established patterns in codebase
+- Clear implementation path with low risk
+- Single-domain changes or well-understood cross-domain patterns
+- Standard CRUD operations or routine enhancements
+
+**Next step:** Review architecture.md and execute workflow directly (agents will implement from briefings)
+{% endif %}
 
 ## Success Criteria
 

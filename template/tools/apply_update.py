@@ -123,14 +123,20 @@ class UpdateApplier:
                 self._apply_append_section()
             elif component_type == "insert_after":
                 self._apply_insert_after()
+            elif component_type == "insert_before":
+                self._apply_insert_before()
             elif component_type == "copy_if_missing":
                 self._apply_copy_if_missing()
             elif component_type == "patch_line":
                 self._apply_patch_line()
             elif component_type == "patch_execute_workflow":
                 self._apply_patch_execute_workflow()
+            elif component_type == "replace_section":
+                self._apply_replace_section()
             elif component_type == "merge_json":
                 self._apply_merge_json()
+            elif component_type == "remove_line_pattern":
+                self._apply_remove_line_pattern()
             else:
                 raise ValueError(f"Unknown component type: {component_type}")
 
@@ -242,6 +248,65 @@ class UpdateApplier:
 
         # Insert after pattern line
         lines.insert(pattern_index + 1, content)
+
+        # Write back
+        with open(target_path, "w", encoding="utf-8") as f:
+            f.writelines(lines)
+
+    def _apply_insert_before(self) -> None:
+        """
+        Apply insert_before update type.
+
+        Inserts section content BEFORE first line matching marker.
+        Similar to append_section but reads from section_file.
+        """
+        target = self.component["target"]
+        marker = self.component["marker"]
+        section_file = self.component["section_file"]
+
+        target_path = self.project_path / target
+
+        # Resolve section file path (relative to template root)
+        template_root = Path.home() / "tier1_workflow_global"
+        section_path = template_root / section_file
+
+        if not target_path.exists():
+            raise FileNotFoundError(f"Target file not found: {target_path}")
+
+        if not section_path.exists():
+            raise FileNotFoundError(f"Section file not found: {section_path}")
+
+        # Read target file
+        with open(target_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+
+        # Find marker
+        marker_index = None
+        for i, line in enumerate(lines):
+            if marker in line:
+                marker_index = i
+                break
+
+        if marker_index is None:
+            raise ValueError(f"Marker not found in target file: {marker}")
+
+        # Read section content
+        with open(section_path, "r", encoding="utf-8") as f:
+            section_content = f.read()
+
+        # Ensure section content ends with newline
+        if not section_content.endswith("\n"):
+            section_content += "\n"
+
+        # Add blank line after section (before marker)
+        section_content += "\n"
+
+        if self.dry_run:
+            print(f"[DRY RUN] Would insert {len(section_content)} chars before line {marker_index}", file=sys.stderr)
+            return
+
+        # Insert section before marker
+        lines.insert(marker_index, section_content)
 
         # Write back
         with open(target_path, "w", encoding="utf-8") as f:
@@ -440,6 +505,167 @@ class UpdateApplier:
                 result[key] = value
 
         return result
+
+    def _apply_replace_section(self) -> None:
+        """
+        Apply replace_section update type.
+
+        Replaces content between start_marker and end_marker with replacement content.
+        Supports wildcard in target path (e.g., spec-architect-*.md).
+        """
+        import glob
+
+        target = self.component["target"]
+        start_marker = self.component["start_marker"]
+        end_marker = self.component["end_marker"]
+        replacement_file = self.component["replacement_file"]
+
+        # Handle wildcard in target path
+        if "*" in target:
+            # Expand wildcard relative to project path
+            target_pattern = str(self.project_path / target)
+            matching_files = glob.glob(target_pattern)
+
+            if not matching_files:
+                raise FileNotFoundError(f"No files match pattern: {target}")
+
+            # Apply to first matching file
+            target_path = Path(matching_files[0])
+        else:
+            target_path = self.project_path / target
+
+        # Resolve replacement file path (relative to template root)
+        template_root = Path.home() / "tier1_workflow_global"
+        replacement_path = template_root / replacement_file
+
+        if not target_path.exists():
+            raise FileNotFoundError(f"Target file not found: {target_path}")
+
+        if not replacement_path.exists():
+            raise FileNotFoundError(f"Replacement file not found: {replacement_path}")
+
+        # Read target file
+        with open(target_path, "r", encoding="utf-8") as f:
+            content = f.read()
+
+        # Find start and end markers
+        start_index = content.find(start_marker)
+        if start_index == -1:
+            raise ValueError(f"Start marker not found in target file: {start_marker}")
+
+        end_index = content.find(end_marker, start_index)
+        if end_index == -1:
+            raise ValueError(f"End marker not found in target file: {end_marker}")
+
+        # Read replacement content
+        with open(replacement_path, "r", encoding="utf-8") as f:
+            replacement_content = f.read()
+
+        # Ensure replacement content ends with newline
+        if not replacement_content.endswith("\n"):
+            replacement_content += "\n"
+
+        if self.dry_run:
+            print(f"[DRY RUN] Would replace {end_index - start_index} chars between markers", file=sys.stderr)
+            return
+
+        # Replace section (keep start_marker, replace up to but not including end_marker)
+        # We want: content_before + start_marker + newline + replacement + end_marker + content_after
+
+        # Find the end of the line containing start_marker
+        start_line_end = content.find("\n", start_index)
+        if start_line_end == -1:
+            start_line_end = len(content)
+        else:
+            start_line_end += 1  # Include the newline
+
+        # Build new content
+        new_content = (
+            content[:start_line_end] +
+            "\n" +
+            replacement_content +
+            "\n" +
+            content[end_index:]
+        )
+
+        # Write back
+        with open(target_path, "w", encoding="utf-8") as f:
+            f.write(new_content)
+
+    def _apply_remove_line_pattern(self) -> None:
+        """
+        Apply remove_line_pattern update type.
+
+        Removes all lines matching the specified pattern from target file(s).
+        Supports wildcard in target path (e.g., .claude/agents/*.md).
+        """
+        import glob
+        import re
+
+        target = self.component["target"]
+        pattern = self.component["pattern"]
+
+        # Handle wildcard in target path
+        if "*" in target:
+            # Expand wildcard relative to project path
+            target_pattern = str(self.project_path / target)
+            matching_files = glob.glob(target_pattern)
+
+            if not matching_files:
+                raise FileNotFoundError(f"No files match pattern: {target}")
+
+            # Apply to all matching files
+            target_paths = [Path(f) for f in matching_files]
+        else:
+            target_paths = [self.project_path / target]
+
+        # Compile regex pattern
+        try:
+            pattern_regex = re.compile(pattern)
+        except re.error as e:
+            raise ValueError(f"Invalid regex pattern '{pattern}': {e}")
+
+        total_lines_removed = 0
+
+        # Process each target file
+        for target_path in target_paths:
+            if not target_path.exists():
+                print(f"Warning: Target file not found (skipping): {target_path}", file=sys.stderr)
+                continue
+
+            # Read target file
+            with open(target_path, "r", encoding="utf-8") as f:
+                lines = f.readlines()
+
+            # Filter out lines matching pattern
+            filtered_lines = []
+            lines_removed = 0
+            for line in lines:
+                if pattern_regex.search(line):
+                    lines_removed += 1
+                else:
+                    filtered_lines.append(line)
+
+            if lines_removed > 0:
+                total_lines_removed += lines_removed
+
+                if self.dry_run:
+                    print(
+                        f"[DRY RUN] Would remove {lines_removed} line(s) from {target_path.name}",
+                        file=sys.stderr
+                    )
+                else:
+                    # Write back filtered content
+                    with open(target_path, "w", encoding="utf-8") as f:
+                        f.writelines(filtered_lines)
+
+                    print(
+                        f"Removed {lines_removed} line(s) matching '{pattern}' from {target_path.name}",
+                        file=sys.stderr
+                    )
+
+        if total_lines_removed == 0:
+            print(f"No lines matching pattern '{pattern}' found in target file(s)", file=sys.stderr)
 
 
 def main() -> None:

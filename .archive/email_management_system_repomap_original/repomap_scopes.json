@@ -1,0 +1,233 @@
+{
+  "scopes": {
+    "backend": {
+      "description": "Backend Python code (FastAPI, services, models)",
+      "include_patterns": [
+        "src/**/*.py",
+        "tests/**/*.py",
+        "alembic/**/*.py",
+        "alembic.ini",
+        "pyproject.toml",
+        "requirements*.txt"
+      ],
+      "exclude_patterns": [
+        "**/__pycache__/**",
+        "**/*.pyc",
+        "**/venv/**",
+        "**/.pytest_cache/**"
+      ],
+      "max_file_size": 100000
+    },
+    "workflow": {
+      "description": "V6 workflow and task management",
+      "include_patterns": [
+        ".tasks/**/*.md",
+        ".tasks/**/*.yaml",
+        ".tasks/**/*.json",
+        ".claude/**/*.md",
+        ".claude/**/*.json",
+        "docs/architecture/**/*.md",
+        "docs/reference/**/*.md",
+        "tools/workflow_utilities_v6/**/*.py",
+        "tools/epic_registry/**/*.py"
+      ],
+      "exclude_patterns": [
+        ".tasks/**/research/**",
+        ".tasks/**/.backups/**"
+      ],
+      "max_file_size": 200000
+    },
+    "specs": {
+      "description": "Specifications, ADRs, and documentation",
+      "include_patterns": [
+        ".tasks/backlog/EPIC-*/spec.md",
+        ".tasks/backlog/EPIC-*/architecture.md",
+        ".tasks/backlog/EPIC-*/task.md",
+        "docs/architecture/**/*.md",
+        "docs/reference/**/*.md",
+        "docs/specs/**/*.md",
+        "CLAUDE.md",
+        "README.md"
+      ],
+      "exclude_patterns": [],
+      "max_file_size": 300000
+    },
+    "frontend": {
+      "description": "Frontend React/TypeScript code",
+      "include_patterns": [
+        "frontend/src/**/*.ts",
+        "frontend/src/**/*.tsx",
+        "frontend/src/**/*.css",
+        "frontend/package.json",
+        "frontend/tsconfig.json",
+        "frontend/vite.config.ts"
+      ],
+      "exclude_patterns": [
+        "frontend/node_modules/**",
+        "frontend/dist/**",
+        "frontend/build/**"
+      ],
+      "max_file_size": 100000
+    },
+    "infrastructure": {
+      "description": "Docker, deployment, and infrastructure",
+      "include_patterns": [
+        "Dockerfile*",
+        "docker-compose*.yml",
+        "docker-compose*.yaml",
+        ".github/**/*.yml",
+        ".github/**/*.yaml",
+        "scripts/**/*.sh",
+        "scripts/**/*.py",
+        "package.json",
+        "pyproject.toml"
+      ],
+      "exclude_patterns": [
+        "node_modules/**"
+      ],
+      "max_file_size": 50000
+    },
+    "chatgpt-integration": {
+      "description": "ChatGPT integration templates and tools",
+      "include_patterns": [
+        "tools/chatgpt_integration/**/*.py",
+        "tools/chatgpt_integration/**/*.sh",
+        "tools/chatgpt_integration/**/*.md",
+        "docs/prompts/chatgpt/**/*.md",
+        "docs/reference/chatgpt-integration-guide.md",
+        ".claude/commands/chatgpt-integrate.md"
+      ],
+      "exclude_patterns": [],
+      "max_file_size": 100000
+    },
+    "complete-backend": {
+      "description": "Complete backend view (code + specs + workflow)",
+      "include_patterns": [
+        "src/**/*.py",
+        "tests/**/*.py",
+        "alembic/**/*.py",
+        ".tasks/backlog/EPIC-*/spec.md",
+        "docs/architecture/SUB-AGENT-BRIEFING-BACKEND.md",
+        "docs/reference/**/*.md",
+        "CLAUDE.md",
+        "pyproject.toml"
+      ],
+      "exclude_patterns": [
+        "**/__pycache__/**",
+        "**/*.pyc",
+        "**/venv/**"
+      ],
+      "max_file_size": 150000
+    },
+    "review-ready": {
+      "description": "Files most relevant for external review (ChatGPT/Gemini)",
+      "include_patterns": [
+        "CLAUDE.md",
+        "README.md",
+        ".tasks/backlog/EPIC-*/spec.md",
+        "docs/architecture/**/*.md",
+        "docs/reference/**/*.md",
+        "src/core/**/*.py",
+        "src/services/**/*.py",
+        "src/models/**/*.py",
+        "tests/services/**/*.py"
+      ],
+      "exclude_patterns": [
+        "**/__pycache__/**",
+        "**/*.pyc"
+      ],
+      "max_file_size": 100000
+    },
+    "claude-sdk-integration": {
+      "description": "Complete context for Claude Agent SDK integration review",
+      "include_patterns": [
+        "claude_workspace/**/*",
+        "lib/**/*.py",
+        "lib/**/*.md",
+        "tools/**/*.py",
+        "tools/**/*.sh",
+        "tools/**/*.md",
+        "ops/**/*",
+        "src/**/*.py",
+        "scripts/**/*.py",
+        "scripts/**/*.sh",
+        ".tasks/**/*.md",
+        ".tasks/**/*.yaml",
+        ".tasks/**/*.json",
+        ".specs/**/*",
+        "docs/prompts/**/*.md",
+        "obsidian-plugin/**/*",
+        "migrations/**/*",
+        "monitoring/**/*",
+        "contracts/**/*.json",
+        "contracts/**/*.yaml",
+        "config/**/*",
+        "alembic/**/*.py",
+        "alembic.ini",
+        "CLAUDE.md",
+        "README.md",
+        "pyproject.toml",
+        "requirements*.txt",
+        "package.json",
+        "docker-compose*.yml",
+        "Dockerfile*",
+        "tests/**/*",
+        ".github/workflows/**/*",
+        "frontend/**/*.ts",
+        "frontend/**/*.tsx",
+        "frontend/**/*.js",
+        "frontend/**/*.jsx",
+        "frontend/public/**/*",
+        "web/**/*.ts",
+        "web/**/*.tsx",
+        "web/**/*.js",
+        "web/**/*.jsx",
+        "web/public/**/*",
+        "app/**/*.ts",
+        "app/**/*.tsx",
+        "app/**/*.js",
+        "app/**/*.jsx",
+        "app/public/**/*",
+        "ui/**/*.ts",
+        "ui/**/*.tsx",
+        "ui/**/*.js",
+        "ui/**/*.jsx",
+        "ui/public/**/*",
+        "Taskfile.yml",
+        "Makefile"
+      ],
+      "exclude_patterns": [
+        "**/__pycache__/**",
+        "**/*.pyc",
+        "**/venv/**",
+        "**/.venv/**",
+        "**/node_modules/**",
+        "**/.pytest_cache/**",
+        ".tasks/**/.backups/**",
+        "**/.git/**",
+        "**/dist/**",
+        "**/build/**"
+      ],
+      "max_file_size": 500000
+    }
+  },
+  "scope_combinations": {
+    "full-review": {
+      "description": "Everything needed for comprehensive external review",
+      "scopes": [
+        "specs",
+        "workflow",
+        "backend"
+      ],
+      "max_total_size": 5000000
+    },
+    "epic-context": {
+      "description": "Context for working on a specific epic",
+      "scopes": [
+        "specs",
+        "backend"
+      ],
+      "max_total_size": 3000000
+    }
+  }
+}

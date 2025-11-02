@@ -20,13 +20,15 @@
     },
     {
       "name": "email_management_system",
-      "path": "/home/andreas-spannbauer/email_management_system",
-      "workflow_type": "V6",
-      "installed_date": "2025-10-19",
-      "last_verified": "2025-10-21",
+      "path": "/home/andreas-spannbauer/coding_projects/email_management_system",
+      "workflow_type": "Tier1",
+      "installed_date": "2025-10-29",
+      "last_verified": "2025-10-29",
       "workflow_version": "1.0.0",
-      "last_updated": "2025-10-21T16:30:00Z",
-      "applied_updates": [],
+      "last_updated": "2025-10-29T19:00:00Z",
+      "applied_updates": [
+        "intelligent-planning-mode-v1"
+      ],
       "template_hash": "8b2ad7e",
       "has_custom_modifications": true,
       "custom_modifications": {
@@ -42,17 +44,21 @@
       "path": "/home/andreas-spannbauer/whisper_hotkeys",
       "workflow_type": "Tier1",
       "installed_date": "2025-10-19",
-      "last_verified": "2025-10-21",
+      "last_verified": "2025-11-01",
       "workflow_version": "1.0.0",
-      "last_updated": "2025-10-24T19:19:58.294629",
+      "last_updated": "2025-11-01T10:24:43Z",
       "applied_updates": [
-        "transcript-path-hook-v1"
+        "transcript-path-hook-v1",
+        "mandatory-library-research-v1",
+        "github-ai-review-integration-v1",
+        "intelligent-planning-mode-v1",
+        "repomap-global-v1"
       ],
       "template_hash": "8b2ad7e",
       "has_custom_modifications": false,
       "custom_modifications": {},
       "custom_commands": [],
-      "notes": "Voice transcription project"
+      "notes": "Voice transcription project. Repomap-global-v1 deployed 2025-11-01 (8/11 components)."
     },
     {
       "name": "ppt_pipeline",
@@ -61,9 +67,12 @@
       "installed_date": "2025-10-19",
       "last_verified": "2025-10-21",
       "workflow_version": "1.0.0",
-      "last_updated": "2025-10-24T19:19:58.488625",
+      "last_updated": "2025-10-29T20:23:00Z",
       "applied_updates": [
-        "transcript-path-hook-v1"
+        "transcript-path-hook-v1",
+        "mandatory-library-research-v1",
+        "github-ai-review-integration-v1",
+        "intelligent-planning-mode-v1"
       ],
       "template_hash": "8b2ad7e",
       "has_custom_modifications": false,
@@ -85,6 +94,27 @@
       "custom_modifications": {},
       "custom_commands": [],
       "notes": "Reference project (lessons integrated into global template)"
+    },
+    {
+      "name": "orchestrator",
+      "path": "/home/andreas-spannbauer/orchestrator",
+      "workflow_type": "Tier1",
+      "installed_date": "2025-10-24",
+      "last_verified": "2025-10-25",
+      "workflow_version": "1.0.0",
+      "last_updated": "2025-10-29T20:23:00Z",
+      "applied_updates": [
+        "agent-failure-reporting-protocol-v1",
+        "mandatory-library-research-v1",
+        "tier1-constitution-v1",
+        "github-ai-review-integration-v1",
+        "intelligent-planning-mode-v1"
+      ],
+      "template_hash": "8b2ad7e",
+      "has_custom_modifications": false,
+      "custom_modifications": {},
+      "custom_commands": [],
+      "notes": "Workflow orchestration system"
     }
   ]
 }

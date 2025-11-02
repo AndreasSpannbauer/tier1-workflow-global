@@ -1,0 +1,126 @@
+name: Claude Code Mention Trigger
+
+on:
+  issues:
+    types: [opened, edited]
+  issue_comment:
+    types: [created, edited]
+  pull_request_review:
+    types: [submitted, edited]
+  pull_request_review_comment:
+    types: [created, edited]
+
+permissions:
+  issues: write
+  pull-requests: write
+  contents: read
+
+jobs:
+  claude-respond:
+    runs-on: ubuntu-latest
+    if: contains(github.event.comment.body, '@claude') || contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude') || contains(github.event.review.body, '@claude')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Claude Code CLI
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          echo "Claude Code CLI installed"
+
+      - name: Authenticate Claude Code
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          echo "$CLAUDE_CODE_OAUTH_TOKEN" | claude /login --token-stdin
+          claude /status
+
+      - name: Extract mention context
+        id: context
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          REVIEW_BODY: ${{ github.event.review.body }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+        run: |
+          # Determine the text containing @claude mention
+          if [ "$EVENT_NAME" = "issue_comment" ] || [ "$EVENT_NAME" = "pull_request_review_comment" ]; then
+            MENTIONED_TEXT="$COMMENT_BODY"
+          elif [ "$EVENT_NAME" = "pull_request_review" ]; then
+            MENTIONED_TEXT="$REVIEW_BODY"
+          elif [ "$EVENT_NAME" = "issues" ]; then
+            MENTIONED_TEXT="$ISSUE_TITLE $ISSUE_BODY"
+          else
+            MENTIONED_TEXT=""
+          fi
+
+          # Extract the request after @claude
+          REQUEST=$(echo "$MENTIONED_TEXT" | sed -n 's/.*@claude \(.*\)/\1/p' | head -1)
+
+          # Set output
+          echo "request=$REQUEST" >> $GITHUB_OUTPUT
+          echo "Extracted request: $REQUEST"
+
+      - name: Invoke Claude Code
+        id: claude
+        env:
+          REQUEST: ${{ steps.context.outputs.request }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+        run: |
+          # Build context-aware prompt
+          PROMPT="You are assisting with GitHub issue/PR #${ISSUE_NUMBER:-$PR_NUMBER} in repository $REPO.
+
+User request: $REQUEST
+
+Please provide a helpful, concise response based on the project context. Review relevant files if needed."
+
+          # Invoke Claude Code (captures output)
+          RESPONSE=$(claude "$PROMPT" 2>&1 || echo "Error: Claude Code invocation failed")
+
+          # Save response to file (GitHub Actions output has size limits)
+          echo "$RESPONSE" > /tmp/claude_response.txt
+
+          # Set truncated output for workflow logs
+          echo "response<<EOF" >> $GITHUB_OUTPUT
+          echo "$RESPONSE" | head -50 >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Post response as comment
+        uses: actions/github-script@v7
+        env:
+          RESPONSE_FILE: /tmp/claude_response.txt
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const response = fs.readFileSync(process.env.RESPONSE_FILE, 'utf8');
+
+            const issueNumber = context.payload.issue?.number || context.payload.pull_request?.number;
+
+            if (!issueNumber) {
+              console.log('No issue or PR number found');
+              return;
+            }
+
+            // Post comment with Claude's response
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+              body: `## @claude response\n\n${response}\n\n---\n*Powered by [Claude Code](https://claude.com/claude-code)*`
+            });
+
+            console.log(`Posted response to #${issueNumber}`);

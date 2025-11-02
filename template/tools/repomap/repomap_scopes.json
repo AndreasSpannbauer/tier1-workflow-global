@@ -1,0 +1,291 @@
+{
+  "scopes": {
+    "backend": {
+      "description": "Backend code (Python, TypeScript, Go, etc.)",
+      "include_patterns": [
+        "src/**/*.py",
+        "api/**/*.py",
+        "server/**/*.go",
+        "api/**/*.ts",
+        "services/**/*.py",
+        "models/**/*.py",
+        "core/**/*.py",
+        "tests/**/*.py",
+        "alembic/**/*.py",
+        "migrations/**/*.py",
+        "alembic.ini",
+        "**/requirements*.txt",
+        "pyproject.toml",
+        "go.mod",
+        "go.sum",
+        "Cargo.toml"
+      ],
+      "exclude_patterns": [
+        "**/__pycache__/**",
+        "**/*.pyc",
+        "**/venv/**",
+        "**/.venv/**",
+        "**/.pytest_cache/**",
+        "**/target/**"
+      ],
+      "max_file_size": 100000
+    },
+    "frontend": {
+      "description": "Frontend code (React, Vue, etc.)",
+      "include_patterns": [
+        "frontend/**/*.{ts,tsx,js,jsx}",
+        "src/**/*.{ts,tsx,js,jsx}",
+        "components/**/*.{ts,tsx,js,jsx}",
+        "app/**/*.{ts,tsx,js,jsx}",
+        "pages/**/*.{ts,tsx,js,jsx}",
+        "ui/**/*.{ts,tsx,js,jsx}",
+        "web/**/*.{ts,tsx,js,jsx}",
+        "**/*.css",
+        "**/*.scss",
+        "**/*.less",
+        "package.json",
+        "tsconfig.json",
+        "vite.config.ts",
+        "next.config.js",
+        "tailwind.config.js"
+      ],
+      "exclude_patterns": [
+        "**/node_modules/**",
+        "**/dist/**",
+        "**/build/**",
+        "**/.next/**"
+      ],
+      "max_file_size": 100000
+    },
+    "workflow": {
+      "description": "Tier1 workflow and task management",
+      "include_patterns": [
+        ".tasks/**/*.md",
+        ".tasks/**/*.yaml",
+        ".tasks/**/*.json",
+        ".claude/**/*.md",
+        ".claude/**/*.json",
+        "docs/architecture/**/*.md",
+        "docs/reference/**/*.md",
+        "tools/**/*.py",
+        "tools/**/*.sh",
+        "scripts/**/*.py",
+        "scripts/**/*.sh",
+        "CLAUDE.md",
+        "README.md"
+      ],
+      "exclude_patterns": [
+        ".tasks/**/research/**",
+        ".tasks/**/.backups/**",
+        "**/__pycache__/**"
+      ],
+      "max_file_size": 200000
+    },
+    "specs": {
+      "description": "Specifications, ADRs, and documentation",
+      "include_patterns": [
+        ".tasks/backlog/*/spec.md",
+        ".tasks/backlog/*/architecture.md",
+        ".tasks/backlog/*/task.md",
+        "docs/architecture/**/*.md",
+        "docs/reference/**/*.md",
+        "docs/specs/**/*.md",
+        "docs/adr/**/*.md",
+        "CLAUDE.md",
+        "README.md",
+        "ARCHITECTURE.md",
+        "DESIGN.md"
+      ],
+      "exclude_patterns": [],
+      "max_file_size": 300000
+    },
+    "infrastructure": {
+      "description": "Docker, deployment, and infrastructure",
+      "include_patterns": [
+        "Dockerfile*",
+        "docker-compose*.yml",
+        "docker-compose*.yaml",
+        ".github/**/*.yml",
+        ".github/**/*.yaml",
+        ".gitlab-ci.yml",
+        "scripts/**/*.sh",
+        "scripts/**/*.py",
+        "deploy/**/*",
+        "k8s/**/*.yaml",
+        "k8s/**/*.yml",
+        "terraform/**/*.tf",
+        "ansible/**/*.yml",
+        "package.json",
+        "pyproject.toml",
+        "Makefile",
+        "Taskfile.yml"
+      ],
+      "exclude_patterns": [
+        "**/node_modules/**",
+        "**/__pycache__/**"
+      ],
+      "max_file_size": 50000
+    },
+    "tests": {
+      "description": "Test files and test utilities",
+      "include_patterns": [
+        "tests/**/*.py",
+        "test/**/*.py",
+        "**/*_test.py",
+        "**/*_test.go",
+        "**/*.test.ts",
+        "**/*.test.tsx",
+        "**/*.test.js",
+        "**/*.test.jsx",
+        "**/*.spec.ts",
+        "**/*.spec.tsx",
+        "**/*.spec.js",
+        "**/*.spec.jsx",
+        "pytest.ini",
+        "jest.config.js",
+        "vitest.config.ts"
+      ],
+      "exclude_patterns": [
+        "**/__pycache__/**",
+        "**/node_modules/**",
+        "**/.pytest_cache/**"
+      ],
+      "max_file_size": 100000
+    },
+    "complete-backend": {
+      "description": "Complete backend view (code + specs + workflow)",
+      "include_patterns": [
+        "src/**/*.py",
+        "api/**/*.py",
+        "services/**/*.py",
+        "models/**/*.py",
+        "tests/**/*.py",
+        "alembic/**/*.py",
+        "migrations/**/*.py",
+        ".tasks/backlog/*/spec.md",
+        "docs/architecture/**/*.md",
+        "docs/reference/**/*.md",
+        "CLAUDE.md",
+        "README.md",
+        "pyproject.toml",
+        "requirements*.txt"
+      ],
+      "exclude_patterns": [
+        "**/__pycache__/**",
+        "**/*.pyc",
+        "**/venv/**",
+        "**/.venv/**"
+      ],
+      "max_file_size": 150000
+    },
+    "complete-frontend": {
+      "description": "Complete frontend view (code + specs + workflow)",
+      "include_patterns": [
+        "frontend/**/*.{ts,tsx,js,jsx}",
+        "src/**/*.{ts,tsx,js,jsx}",
+        "components/**/*.{ts,tsx,js,jsx}",
+        "**/*.css",
+        ".tasks/backlog/*/spec.md",
+        "docs/architecture/**/*.md",
+        "CLAUDE.md",
+        "README.md",
+        "package.json",
+        "tsconfig.json"
+      ],
+      "exclude_patterns": [
+        "**/node_modules/**",
+        "**/dist/**",
+        "**/build/**"
+      ],
+      "max_file_size": 150000
+    },
+    "review-ready": {
+      "description": "Optimized for external review (ChatGPT/Gemini)",
+      "include_patterns": [
+        "CLAUDE.md",
+        "README.md",
+        ".tasks/backlog/*/spec.md",
+        "docs/architecture/**/*.md",
+        "docs/reference/**/*.md",
+        "src/**/*.py",
+        "src/**/*.ts",
+        "src/**/*.tsx",
+        "api/**/*.py",
+        "api/**/*.ts",
+        "services/**/*.py",
+        "models/**/*.py",
+        "components/**/*.tsx",
+        "tests/**/*.py",
+        "tests/**/*.ts"
+      ],
+      "exclude_patterns": [
+        "**/__pycache__/**",
+        "**/*.pyc",
+        "**/node_modules/**"
+      ],
+      "max_file_size": 100000
+    },
+    "generic": {
+      "description": "Generic project overview",
+      "include_patterns": [
+        "CLAUDE.md",
+        "README.md",
+        "docs/**/*.md",
+        "src/**/*",
+        "lib/**/*",
+        "scripts/**/*",
+        "package.json",
+        "pyproject.toml",
+        "Makefile",
+        "Taskfile.yml"
+      ],
+      "exclude_patterns": [
+        "**/__pycache__/**",
+        "**/*.pyc",
+        "**/node_modules/**",
+        "**/venv/**",
+        "**/.venv/**",
+        "**/dist/**",
+        "**/build/**",
+        "**/.git/**"
+      ],
+      "max_file_size": 100000
+    }
+  },
+  "scope_combinations": {
+    "full-review": {
+      "description": "Everything needed for comprehensive external review",
+      "scopes": [
+        "specs",
+        "workflow",
+        "backend"
+      ],
+      "max_total_size": 5000000
+    },
+    "fullstack-review": {
+      "description": "Complete fullstack project review",
+      "scopes": [
+        "specs",
+        "backend",
+        "frontend"
+      ],
+      "max_total_size": 5000000
+    },
+    "epic-context": {
+      "description": "Context for working on a specific epic",
+      "scopes": [
+        "specs",
+        "backend"
+      ],
+      "max_total_size": 3000000
+    },
+    "deployment-ready": {
+      "description": "Infrastructure and deployment context",
+      "scopes": [
+        "infrastructure",
+        "specs"
+      ],
+      "max_total_size": 2000000
+    }
+  }
+}

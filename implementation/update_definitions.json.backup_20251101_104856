@@ -1,6 +1,6 @@
 {
   "version": "1.0.0",
-  "last_updated": "2025-11-01T00:00:00Z",
+  "last_updated": "2025-10-26T00:00:00Z",
   "updates": [
     {
       "id": "agent-model-cleanup-v1",
@@ -19,9 +19,7 @@
         }
       ],
       "validation": {
-        "forbidden_patterns": [
-          "^model:"
-        ],
+        "forbidden_patterns": ["^model:"],
         "files_to_check": [
           ".claude/agents/implementation_agent_v1.md",
           ".claude/agents/post_mortem_agent_v1.md",
@@ -71,13 +69,7 @@
         }
       ],
       "validation": {
-        "required_keywords": [
-          "BLOCKER DETECTED",
-          "No Improvisation When Blocked",
-          "_simulate_",
-          "_mock_",
-          "_fake_"
-        ],
+        "required_keywords": ["BLOCKER DETECTED", "No Improvisation When Blocked", "_simulate_", "_mock_", "_fake_"],
         "files_to_check": [
           ".claude/agent_briefings/backend_implementation.md",
           ".claude/agent_briefings/project_architecture.md",
@@ -114,7 +106,7 @@
           "operations": [
             {
               "search": "# Export transcript using standalone utility\npython3 tools/export_conversation_transcript.py \\\n  \"$transcript_path\" \\\n  \".workflow/outputs/${ARGUMENTS}/conversation-transcript.md\" \\\n  \"${ARGUMENTS}\"",
-              "replace": "# Read transcript_path from file written by UserPromptSubmit hook\ntranscript_path=\"\"\nif [ -f \".workflow/transcript_path.txt\" ]; then\n  transcript_path=$(cat .workflow/transcript_path.txt)\nfi\n\nif [ -n \"$transcript_path\" ] && [ -f \"$transcript_path\" ]; then\n  # Export transcript using standalone utility\n  python3 tools/export_conversation_transcript.py \\\n    \"$transcript_path\" \\\n    \".workflow/outputs/${ARGUMENTS}/conversation-transcript.md\" \\\n    \"${ARGUMENTS}\"\nelse\n  echo \"\u26a0\ufe0f Transcript path not available (hook may not be configured)\"\n  echo \"   To enable: Add UserPromptSubmit hook in .claude/settings.json\"\n  echo \"   Continuing with post-mortem using placeholder...\"\nfi",
+              "replace": "# Read transcript_path from file written by UserPromptSubmit hook\ntranscript_path=\"\"\nif [ -f \".workflow/transcript_path.txt\" ]; then\n  transcript_path=$(cat .workflow/transcript_path.txt)\nfi\n\nif [ -n \"$transcript_path\" ] && [ -f \"$transcript_path\" ]; then\n  # Export transcript using standalone utility\n  python3 tools/export_conversation_transcript.py \\\n    \"$transcript_path\" \\\n    \".workflow/outputs/${ARGUMENTS}/conversation-transcript.md\" \\\n    \"${ARGUMENTS}\"\nelse\n  echo \"⚠️ Transcript path not available (hook may not be configured)\"\n  echo \"   To enable: Add UserPromptSubmit hook in .claude/settings.json\"\n  echo \"   Continuing with post-mortem using placeholder...\"\nfi",
               "idempotent_check": "grep -q 'transcript_path.txt' {target}"
             }
           ]
@@ -207,7 +199,7 @@
         {
           "type": "append_section",
           "target": "CLAUDE.md",
-          "marker": "## \ud83c\udfaf Primary Use Cases",
+          "marker": "## 🎯 Primary Use Cases",
           "section_file": "implementation/updates/tier1-constitution-v1/claude-md-section.md",
           "idempotent_check": "grep -q 'Constitutional Compliance' {target}",
           "description": "Add constitution documentation to CLAUDE.md"
@@ -244,7 +236,7 @@
       "id": "mandatory-library-research-v1",
       "version": "1.0.0",
       "date": "2025-10-25",
-      "description": "Enforce Pattern Library \u2192 Context7 research workflow for all external dependencies in spec creation",
+      "description": "Enforce Pattern Library → Context7 research workflow for all external dependencies in spec creation",
       "priority": "critical",
       "source": "Pattern library underutilization - Context7 MCP not being queried during spec phase",
       "components": [
@@ -281,7 +273,7 @@
         ]
       },
       "notes": [
-        "This update enforces the Pattern Library \u2192 Context7 research workflow during spec creation",
+        "This update enforces the Pattern Library → Context7 research workflow during spec creation",
         "Pattern library is always queried FIRST to save tokens and ensure consistency",
         "Context7 is used as FALLBACK when pattern library has no relevant patterns",
         "All Context7 calls are auto-queued for extraction to grow the pattern library",
@@ -370,173 +362,10 @@
         "@codex is optional and requires Codex Cloud configuration",
         "Phase 5.3 automatically creates feature branch and PR with AI review tags",
         "Requires CLAUDE_CODE_OAUTH_TOKEN secret setup per repository (one-time)",
-        "Generate token: claude /token, then add to GitHub Settings \u2192 Secrets \u2192 Actions",
+        "Generate token: claude /token, then add to GitHub Settings → Secrets → Actions",
         "Verification: .github/workflows/scripts/verify-mention-triggers.sh",
         "Non-blocking: PR creation failures don't stop workflow execution",
         "Already deployed to: whisper_hotkeys, ppt_pipeline, orchestrator"
-      ]
-    },
-    {
-      "id": "repomap-global-v1",
-      "version": "1.0.0",
-      "date": "2025-11-01",
-      "description": "Global repomap generation with optional Repomix integration for AI code review workflows",
-      "priority": "medium",
-      "source": "email_management_system extraction + 2025 research (Repomix, tree-sitter, GitHub Copilot patterns)",
-      "components": [
-        {
-          "type": "copy_if_missing",
-          "target": "tools/generate_scoped_repomap.py",
-          "source": "template/tools/generate_scoped_repomap.py",
-          "idempotent_check": "test -f {target}",
-          "description": "Main repomap generation script (proven glob-based engine)"
-        },
-        {
-          "type": "copy_if_missing",
-          "target": "tools/repomap_scopes.json",
-          "source": "template/tools/repomap_scopes.json",
-          "idempotent_check": "test -f {target}",
-          "description": "Universal scope definitions (backend, frontend, workflow, etc.)"
-        },
-        {
-          "type": "copy_if_missing",
-          "target": "tools/cleanup_repomaps.sh",
-          "source": "template/tools/cleanup_repomaps.sh",
-          "idempotent_check": "test -f {target}",
-          "executable": true,
-          "description": "Cleanup utility for generated repomaps"
-        },
-        {
-          "type": "copy_if_missing",
-          "target": "tools/REPOMAP_GUIDE.md",
-          "source": "template/tools/REPOMAP_GUIDE.md",
-          "idempotent_check": "test -f {target}",
-          "description": "Complete repomap documentation and usage guide"
-        },
-        {
-          "type": "copy_if_missing",
-          "target": "tools/repomix_adapter.py",
-          "source": "template/tools/repomix_adapter.py",
-          "idempotent_check": "test -f {target}",
-          "description": "Optional Repomix integration (77% token reduction)"
-        },
-        {
-          "type": "copy_if_missing",
-          "target": "tools/repomix_config_template.json",
-          "source": "template/tools/repomix_config_template.json",
-          "idempotent_check": "test -f {target}",
-          "description": "Repomix configuration template"
-        },
-        {
-          "type": "copy_if_missing",
-          "target": "tools/REPOMIX_INTEGRATION.md",
-          "source": "template/tools/REPOMIX_INTEGRATION.md",
-          "idempotent_check": "test -f {target}",
-          "description": "Repomix integration documentation"
-        },
-        {
-          "type": "copy_if_missing",
-          "target": "scripts/generate_pr_repomap.sh",
-          "source": "template/scripts/generate_pr_repomap.sh",
-          "idempotent_check": "test -f {target}",
-          "executable": true,
-          "description": "PR-specific repomap generator"
-        },
-        {
-          "type": "copy_if_missing",
-          "target": ".claude/commands/generate-repomap.md",
-          "source": "template/.claude/commands/generate-repomap.md",
-          "idempotent_check": "test -f {target}",
-          "description": "Interactive repomap generation command"
-        },
-        {
-          "type": "copy_if_missing",
-          "target": ".claude/commands/chatgpt-implement.md",
-          "source": "template/.claude/commands/chatgpt-implement.md",
-          "idempotent_check": "test -f {target}",
-          "description": "ChatGPT implementation workflow (Claude generates intelligent prompts, script handles automation)"
-        },
-        {
-          "type": "copy_if_missing",
-          "target": ".claude/commands/generate-pr-repomap.md",
-          "source": "template/.claude/commands/generate-pr-repomap.md",
-          "idempotent_check": "test -f {target}",
-          "description": "PR-specific repomap command"
-        },
-        {
-          "type": "copy_if_missing",
-          "target": "tools/chatgpt_repomap_automation.py",
-          "source": "template/tools/chatgpt_repomap_automation.py",
-          "idempotent_check": "test -f {target}",
-          "executable": true,
-          "description": "Fully automated ChatGPT repomap interaction via Playwright MCP (dumb automation tool)"
-        },
-        {
-          "type": "copy_if_missing",
-          "target": "tools/CHATGPT_AUTOMATION_GUIDE.md",
-          "source": "template/tools/CHATGPT_AUTOMATION_GUIDE.md",
-          "idempotent_check": "test -f {target}",
-          "description": "Complete guide for ChatGPT automation script with architecture and examples"
-        }
-      ],
-      "dependencies": {
-        "system_packages": [
-          "enscript",
-          "ghostscript"
-        ],
-        "python_packages": [],
-        "npm_packages": [],
-        "optional": {
-          "repomix": "77% token reduction if available (npm install -g repomix), falls back to proven engine if missing",
-          "gh": "GitHub CLI for PR-specific repomaps",
-          "tree": "Directory structure visualization"
-        }
-      },
-      "validation": {
-        "required_files": [
-          "tools/generate_scoped_repomap.py",
-          "tools/repomap_scopes.json",
-          "tools/chatgpt_repomap_automation.py",
-          "tools/CHATGPT_AUTOMATION_GUIDE.md",
-          ".claude/commands/generate-repomap.md",
-          ".claude/commands/chatgpt-implement.md"
-        ],
-        "required_keywords": [
-          "scoped_repomap",
-          "review-ready",
-          "backend",
-          "frontend",
-          "generate-repomap",
-          "chatgpt_repomap_automation",
-          "Claude generates intelligent prompts"
-        ],
-        "files_to_check": [
-          "tools/generate_scoped_repomap.py",
-          "tools/repomap_scopes.json",
-          "tools/chatgpt_repomap_automation.py",
-          "tools/CHATGPT_AUTOMATION_GUIDE.md",
-          ".claude/commands/generate-repomap.md",
-          ".claude/commands/chatgpt-implement.md"
-        ],
-        "test_command": "python3 tools/generate_scoped_repomap.py --list-scopes"
-      },
-      "notes": [
-        "This update extracts proven repomap functionality from email_management_system for global use",
-        "Includes ChatGPT automation script (tools/chatgpt_repomap_automation.py) for browser automation",
-        "Architecture: Claude generates intelligent prompts, script handles dumb automation (upload/poll/download)",
-        "ChatGPT automation separates concerns: Claude handles intelligence, script handles browser brittle bits",
-        "Primary engine: Glob-based pattern matching (proven, fast, no dependencies)",
-        "Optional enhancement: Repomix integration (77% token reduction, requires npm)",
-        "Universal scopes work across backend-only, frontend-only, and full-stack projects",
-        "Auto-detection selects appropriate default scope based on project structure",
-        "Project-specific customization via tools/repomap_scopes_custom.json (optional)",
-        "Supports TXT + PDF generation (PDF requires enscript + ghostscript)",
-        "ChatGPT automation via Playwright MCP with resumable session state management",
-        "Script prerequisites: Gopass credentials (chatgpt_user, chatgpt_pw), Playwright MCP service",
-        "PR-specific repomaps for focused code review (requires GitHub CLI)",
-        "Original email_management_system files archived in .archive/email_management_system_repomap_original/",
-        "10 single scopes + 4 scope combinations included by default",
-        "Complete documentation in tools/REPOMAP_GUIDE.md, tools/REPOMIX_INTEGRATION.md, tools/CHATGPT_AUTOMATION_GUIDE.md"
       ]
     }
   ]

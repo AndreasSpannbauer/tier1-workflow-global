@@ -1,0 +1,42 @@
+{
+  "$schema": "https://github.com/yamadashy/repomix/blob/main/config-schema.json",
+  "output": {
+    "style": "markdown",
+    "filePath": "repomix-output.md",
+    "showLineNumbers": true,
+    "topFilesLength": 10,
+    "compress": true,
+    "git": {
+      "sortByChanges": true,
+      "sortByChangesMaxCommits": 100
+    }
+  },
+  "include": [
+    "**/*.py",
+    "**/*.md",
+    "**/*.json",
+    "**/*.yaml",
+    "**/*.yml"
+  ],
+  "ignore": {
+    "useGitignore": true,
+    "useDefaultPatterns": true,
+    "customPatterns": [
+      "**/__pycache__/**",
+      "**/*.pyc",
+      "**/venv/**",
+      "**/.venv/**",
+      "**/node_modules/**",
+      "**/.pytest_cache/**",
+      "**/.git/**",
+      "**/dist/**",
+      "**/build/**"
+    ]
+  },
+  "input": {
+    "maxFileSize": 100
+  },
+  "security": {
+    "enableSecurityCheck": true
+  }
+}

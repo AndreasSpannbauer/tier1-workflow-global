@@ -446,6 +446,49 @@ install_agents() {
     log SUCCESS "Agents and briefings installed"
 }
 
+verify_agent_configurations() {
+    log STEP "Verifying agent configurations..."
+
+    if [[ "${DRY_RUN}" == "true" ]]; then
+        log INFO "[DRY RUN] Would verify agent model definitions"
+        return
+    fi
+
+    # Check for model definitions in agent files
+    local agent_model_count=0
+    local agents_with_models=()
+
+    if [[ -d "${PROJECT_DIR}/.claude/agents" ]]; then
+        while IFS= read -r -d '' file; do
+            if grep -q "^model:" "$file" 2>/dev/null; then
+                ((agent_model_count++))
+                agents_with_models+=("$(basename "$file")")
+            fi
+        done < <(find "${PROJECT_DIR}/.claude/agents" -name "*.md" -type f -print0)
+    fi
+
+    if [[ ${agent_model_count} -gt 0 ]]; then
+        log WARNING "Found ${agent_model_count} agent file(s) with model definitions:"
+        for agent in "${agents_with_models[@]}"; do
+            log WARNING "  - ${agent}"
+        done
+        log INFO "Removing model definitions to prevent token waste..."
+
+        # Remove model: lines from agent files
+        find "${PROJECT_DIR}/.claude/agents" -name "*.md" -type f -exec sed -i '/^model:/d' {} \;
+
+        log SUCCESS "Agent model definitions removed - agents will use session model"
+    else
+        log SUCCESS "All agents correctly configured (no model definitions)"
+    fi
+
+    # Log informational message
+    log INFO "Agent Configuration: All agents default to session model (Sonnet 4.5)"
+    log INFO "  - NO 'model:' specifications in agent frontmatter"
+    log INFO "  - Prevents unnecessary Opus token costs"
+    log INFO "  - Ensures consistent behavior with main session"
+}
+
 install_task_templates() {
     log STEP "Installing task templates..."
 
@@ -732,6 +775,7 @@ show_summary() {
     echo "    ├── commands/          (8 workflow commands)"
     echo "    ├── output-styles/     (1 spec architect style)"
     echo "    ├── agents/            (4 agents: implementation, post-mortem, build-fixer, integration-planning)"
+    echo "    │                       └── Verified: No model definitions (use session model)"
     echo "    └── README.md          (workflow guide)"
     echo ""
     echo "  ${BOLD}.tasks/${RESET}"
@@ -945,6 +989,7 @@ main() {
     install_directory_structure
     install_claude_config
     install_agents
+    verify_agent_configurations
     install_task_templates
     install_validation_scripts
     install_github_integration

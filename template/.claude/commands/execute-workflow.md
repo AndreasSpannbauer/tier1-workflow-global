@@ -112,6 +112,97 @@ echo "Epic directory: $EPIC_DIR"
 
 Store EPIC_DIR for use in subsequent steps.
 
+---
+
+### Step 0.1B: Detect Execution Mode (Direct vs Planning)
+
+Determine whether to use direct mode (lightweight tasks) or planning mode (detailed file-tasks.md).
+
+```bash
+echo ""
+echo "📋 Detecting execution mode..."
+echo ""
+
+# Extract recommended_mode from spec frontmatter
+SPEC_FILE="${EPIC_DIR}/spec.md"
+
+if [ ! -f "$SPEC_FILE" ]; then
+  echo "❌ spec.md not found"
+  exit 1
+fi
+
+# Read recommended_mode from YAML frontmatter
+RECOMMENDED_MODE=$(grep "^recommended_mode:" "$SPEC_FILE" | sed 's/recommended_mode: *//' | tr -d '[:space:]')
+COMPLEXITY_SCORE=$(grep "^estimated_complexity:" "$SPEC_FILE" | sed 's/estimated_complexity: *//' | tr -d '[:space:]')
+
+# Default to direct if not specified (backward compatibility)
+if [ -z "$RECOMMENDED_MODE" ]; then
+  RECOMMENDED_MODE="direct"
+  COMPLEXITY_SCORE="N/A"
+fi
+
+# Check for CLI flags in ARGUMENTS (supports --direct or --planning)
+EXECUTION_MODE="$RECOMMENDED_MODE"  # Start with recommendation
+
+if [[ "$ARGUMENTS" == *"--direct"* ]]; then
+  EXECUTION_MODE="direct"
+  echo "🔧 Mode override: --direct flag detected"
+elif [[ "$ARGUMENTS" == *"--planning"* ]]; then
+  EXECUTION_MODE="planning"
+  echo "🔧 Mode override: --planning flag detected"
+fi
+
+# Display mode information
+echo "Recommended mode: $RECOMMENDED_MODE"
+[ "$COMPLEXITY_SCORE" != "N/A" ] && echo "Complexity score: $COMPLEXITY_SCORE/10"
+echo "Selected mode: $EXECUTION_MODE"
+echo ""
+
+# Explain modes
+if [ "$EXECUTION_MODE" = "planning" ]; then
+  echo "📝 Planning Mode:"
+  echo "   - Requires detailed implementation plan (file-tasks.md)"
+  echo "   - Agents follow prescriptive file-by-file instructions"
+  echo "   - Best for complex/novel features requiring detailed design"
+  echo ""
+elif [ "$EXECUTION_MODE" = "direct" ]; then
+  echo "⚡ Direct Mode:"
+  echo "   - No detailed task files required"
+  echo "   - Agents implement from briefings + architecture"
+  echo "   - Best for routine features following established patterns"
+  echo ""
+fi
+
+# Prompt user if using recommendation but allow override
+if [[ "$ARGUMENTS" != *"--direct"* ]] && [[ "$ARGUMENTS" != *"--planning"* ]]; then
+  if [ "$RECOMMENDED_MODE" = "planning" ]; then
+    echo "⚠️  This epic has complexity score $COMPLEXITY_SCORE/10"
+    echo "⚠️  Planning mode recommended for careful design review"
+    echo ""
+  fi
+
+  echo "Press Enter to continue with $EXECUTION_MODE mode"
+  echo "(or type 'direct' or 'planning' to override, or Ctrl+C to cancel)"
+  read -p "> " USER_MODE_CHOICE
+
+  if [ ! -z "$USER_MODE_CHOICE" ]; then
+    if [ "$USER_MODE_CHOICE" = "direct" ] || [ "$USER_MODE_CHOICE" = "planning" ]; then
+      EXECUTION_MODE="$USER_MODE_CHOICE"
+      echo ""
+      echo "✅ Mode set to: $EXECUTION_MODE"
+      echo ""
+    else
+      echo "❌ Invalid mode: $USER_MODE_CHOICE (must be 'direct' or 'planning')"
+      exit 1
+    fi
+  fi
+fi
+```
+
+Store `$EXECUTION_MODE` for use in validation and agent prompts.
+
+---
+
 ### Step 0.2: Verify Required Files (Two-Phase Validation)
 
 **CRITICAL:** This uses the canonical two-phase validation pattern from ADR-012.
@@ -119,12 +210,21 @@ Store EPIC_DIR for use in subsequent steps.
 Phase 1 checks file existence. Phase 2 checks for template placeholders.
 
 ```bash
-# Required files
-REQUIRED_FILES=(
-  "spec.md"
-  "architecture.md"
-  "implementation-details/file-tasks.md"
-)
+# Required files (conditional based on execution mode)
+if [ "$EXECUTION_MODE" = "planning" ]; then
+  # Planning mode requires detailed implementation plan
+  REQUIRED_FILES=(
+    "spec.md"
+    "architecture.md"
+    "implementation-details/file-tasks.md"
+  )
+else
+  # Direct mode only requires spec and architecture
+  REQUIRED_FILES=(
+    "spec.md"
+    "architecture.md"
+  )
+fi
 
 # Template markers that indicate incomplete specifications (18 markers from ADR-012)
 TEMPLATE_MARKERS=(
@@ -563,9 +663,45 @@ ARCHITECTURE:
 
 ---
 
+**[IF $EXECUTION_MODE = "planning"]**
+
 PRESCRIPTIVE PLAN (YOUR SOURCE OF TRUTH):
 
 [Read ${EPIC_DIR}/implementation-details/file-tasks.md]
+
+This file contains detailed file-by-file implementation instructions.
+Follow this plan exactly. Each file is specified with its purpose, structure, and implementation details.
+
+**[ELSE IF $EXECUTION_MODE = "direct"]**
+
+IMPLEMENTATION GUIDANCE (DIRECT MODE):
+
+**Execution Mode:** Direct implementation from briefings and architecture
+
+You do NOT have a detailed prescriptive plan (file-tasks.md). Instead, implement the epic using:
+1. Domain briefings (above) - Constitutional rules, patterns, architectural constraints
+2. Spec + Architecture (above) - Requirements, components, data flow
+3. Your knowledge of the tech stack and best practices
+
+**Your Task:**
+- Analyze the spec and architecture
+- Design the implementation approach (what files to create/modify)
+- Implement all components following briefing rules
+- Ensure consistency with existing codebase patterns
+
+**Key Reminders:**
+- Follow constitutional principles (simplicity, no abstraction, no mocking, graph-server analysis)
+- Use established patterns from the codebase
+- Create service layer, API routes, models, schemas as needed
+- Write integration tests (no mocks)
+- Document any architectural decisions
+
+**If you encounter blockers:**
+- DO NOT improvise or simulate
+- STOP and report the blocker in results JSON
+- Include what information/clarification you need
+
+**[END IF]**
 
 ---
 
@@ -579,7 +715,7 @@ Format:
   "status": "success|partial|failed",
   "epic_id": "${ARGUMENTS}",
   "agent_type": "implementation-agent-v1",
-  "execution_mode": "sequential",
+  "execution_mode": "sequential-{EXECUTION_MODE}",
   "files_created": ["path/to/file1.py", "path/to/file2.py"],
   "files_modified": ["path/to/existing_file.py"],
   "issues_encountered": [
@@ -599,7 +735,15 @@ Format:
 
 BEGIN IMPLEMENTATION.
 
-Follow the prescriptive plan exactly. Create and modify files as specified. Add error handling. Write clean, maintainable code. Document any issues in the results JSON.
+**[IF $EXECUTION_MODE = "planning"]**
+Follow the prescriptive plan exactly. Create and modify files as specified.
+
+**[ELSE IF $EXECUTION_MODE = "direct"]**
+Implement the epic based on spec + architecture + briefings. Design your own approach.
+
+**[END IF]**
+
+Add error handling. Write clean, maintainable code. Document any issues in the results JSON.
 
 WHEN COMPLETE: Write results to .workflow/outputs/${ARGUMENTS}/phase1_results.json
 ```
@@ -2450,7 +2594,59 @@ fi
 echo ""
 ```
 
-### Step 5.3: Move Epic to Completed
+### Step 5.3: Create Feature Branch and Pull Request with AI Review
+
+```bash
+echo "Creating feature branch and pull request..."
+echo ""
+
+# Generate summary from implementation results
+if [ "$EXECUTION_MODE" = "parallel" ]; then
+  SUMMARY="Parallel implementation completed across ${TOTAL_FILES_CREATED} new files and ${TOTAL_FILES_MODIFIED} modified files."
+else
+  SUMMARY="Sequential implementation completed with ${TOTAL_FILES_CREATED} new files and ${TOTAL_FILES_MODIFIED} modified files."
+fi
+
+# Create feature branch and PR using helper script
+python3 << 'EOF'
+import sys
+import os
+sys.path.insert(0, os.path.join(os.getcwd(), "tools"))
+
+from github_integration.pr_with_ai_review import create_feature_branch_and_pr
+
+epic_id = os.environ.get("ARGUMENTS")
+epic_title = os.environ.get("EPIC_TITLE")
+summary = os.environ.get("SUMMARY")
+
+result = create_feature_branch_and_pr(
+    epic_id=epic_id,
+    epic_title=epic_title,
+    summary=summary,
+    base_branch="main"
+)
+
+if result:
+    print(f"\n✅ Feature branch created: {result['branch']}")
+    print(f"✅ Pull request created: {result['pr_url']}")
+    print(f"✅ AI review requested from @claude and @codex")
+
+    # Save PR info for later
+    with open(f".workflow/outputs/{epic_id}/pr_info.txt", "w") as f:
+        f.write(f"{result['pr_url']}\n")
+        f.write(f"{result['branch']}\n")
+        f.write(f"{result['pr_number']}\n")
+
+    sys.exit(0)
+else:
+    print("\n⚠️ PR creation failed (non-blocking)")
+    sys.exit(0)
+EOF
+
+echo ""
+```
+
+### Step 5.4: Move Epic to Completed and Update Registry
 
 ```bash
 echo "Moving epic to completed..."
@@ -2458,18 +2654,68 @@ echo "Moving epic to completed..."
 COMPLETED_DIR=".tasks/completed"
 mkdir -p "$COMPLETED_DIR"
 
+# Move directory
 mv "$EPIC_DIR" "$COMPLETED_DIR/"
 
 if [ $? -eq 0 ]; then
   echo "✅ Epic moved to: $COMPLETED_DIR/$(basename $EPIC_DIR)"
+  NEW_EPIC_DIR="$COMPLETED_DIR/$(basename $EPIC_DIR)"
 else
   echo "⚠️ Failed to move epic to completed (non-critical)"
+  NEW_EPIC_DIR="$EPIC_DIR"
+fi
+
+# Update epic registry
+if [ -f .tasks/epic_registry.json ]; then
+  echo "📝 Updating epic registry..."
+
+  python3 << EOF
+import sys
+import json
+from pathlib import Path
+from datetime import datetime
+
+sys.path.insert(0, str(Path.cwd()))
+
+try:
+    from tools.epic_registry import load_registry
+
+    # Load registry
+    registry = load_registry()
+
+    # Get epic
+    epic = registry.get_epic("${ARGUMENTS}")
+
+    if epic:
+        # Update epic status and metadata
+        epic.status = "implemented"
+        epic.implemented_date = datetime.now().strftime("%Y-%m-%d")
+        epic.directory = "${NEW_EPIC_DIR}"
+        epic.execution_mode = "${EXECUTION_MODE}"
+        epic.files_created = ${TOTAL_FILES_CREATED:-0}
+        epic.files_modified = ${TOTAL_FILES_MODIFIED:-0}
+
+        # Save registry
+        registry.save()
+
+        print(f"  ✅ Registry updated: {epic.epic_id} → implemented")
+        print(f"     Files created: {epic.files_created}")
+        print(f"     Files modified: {epic.files_modified}")
+    else:
+        print(f"  ⚠️ Epic ${ARGUMENTS} not found in registry")
+
+except Exception as e:
+    print(f"  ⚠️ Failed to update registry: {e}")
+
+EOF
+else
+  echo "ℹ️ No epic registry found (.tasks/epic_registry.json)"
 fi
 
 echo ""
 ```
 
-### Step 5.4: Close GitHub Epic Issue (Optional)
+### Step 5.5: Close GitHub Epic Issue (Optional)
 
 ```bash
 EPIC_ISSUE_NUMBER=$(cat .workflow/outputs/${ARGUMENTS}/github_epic_issue.txt 2>/dev/null)
@@ -2659,9 +2905,20 @@ ARCHITECTURE DESIGN:
 
 ---
 
+**[IF $EXECUTION_MODE = "planning"]**
+
 PRESCRIPTIVE PLAN:
 
 [Read ${EPIC_DIR}/implementation-details/file-tasks.md]
+
+**[ELSE IF $EXECUTION_MODE = "direct"]**
+
+IMPLEMENTATION APPROACH:
+
+Direct mode was used - agents implemented from briefings and architecture without detailed prescriptive plan.
+Agents designed their own implementation approach based on requirements and established patterns.
+
+**[END IF]**
 
 ---
 
