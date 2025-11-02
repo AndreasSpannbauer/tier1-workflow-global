@@ -1,273 +1,280 @@
 ---
-description: "Generate contextual ChatGPT prompts and automate repomap upload/response handling"
-allowed-tools: [Bash(python3 tools/chatgpt_repomap_automation.py:*), Bash(python3 tools/generate_scoped_repomap.py:*), Bash(mkdir:*), Bash(cp:*), Bash(ls:*), Bash(find:*), Bash(mv:*), Bash(git apply:*), Read, Write]
-argument-hint: "EPIC-ID [--scope=backend|complete-backend|frontend] [--auto]"
+description: "Get ChatGPT implementation help with automated file upload"
+allowed-tools: [Bash, Read, Write, mcp__playwright__browser_snapshot, mcp__playwright__browser_type, mcp__playwright__browser_click, mcp__playwright__browser_wait_for]
+argument-hint: "EPIC-ID [--scope=backend|frontend|fullstack-review]"
 ---
 
-Generate intelligent, contextual prompts for ChatGPT code implementation requests. Claude analyzes the EPIC and generates focused prompts; the automation script handles browser automation (upload → wait → download).
-
-## Context
-- Current working directory: !`pwd`
-- Available EPIC: !`ls -1 .tasks/backlog/ | grep EPIC`
-- Automation script: `tools/chatgpt_repomap_automation.py`
-- Response saved to: `chatgpt-response.json`
+Get ChatGPT's help implementing an EPIC. Upload helper handles boring setup (navigate, authenticate, upload files), then YOU take over for intelligent interaction (prompting, response parsing, patch extraction).
 
 ## Architecture: Separation of Concerns
 
-**Claude (intelligent):**
-- Analyze EPIC context and requirements
-- Generate focused, contextual prompts
-- Parse ChatGPT response
-- Extract and apply patches
+**Upload Helper (Python script):**
+- ✅ Open browser and navigate to ChatGPT
+- ✅ Authenticate if needed (gopass credentials)
+- ✅ Upload repomap + MASTER_SPEC.md
+- ✅ Return control to Claude
 
-**Script (dumb automation):**
-- Upload repomap and files to ChatGPT
-- Poll for response completion
-- Download response JSON
-- Handle browser navigation
+**Claude (YOU - intelligent interaction):**
+- ✅ Generate contextual prompt based on EPIC
+- ✅ Send prompt via MCP browser tools
+- ✅ Monitor response completion
+- ✅ Extract patches from response
+- ✅ Apply patches with git apply
+
+## Context
+- Current working directory: !`pwd`
+- Available EPICs: !`ls -1 .tasks/backlog/ | grep EPIC`
+- Upload helper: `tools/chatgpt_upload_helper.py`
 
 ## Your Task
 
-1. **Parse Arguments**
-   - Extract EPIC-ID from $ARGUMENTS
-   - Detect --auto flag for automation
-   - Detect scope from EPIC domain (default: backend)
-   - EPIC format: EPIC-XXX-ShortName
+### Phase 1: Parse Arguments and Analyze EPIC
 
-2. **Read and Analyze EPIC**
-   - Read `.tasks/backlog/EPIC-{ID}-{Name}/spec.md`
-   - Identify domain, objective, requirements, and acceptance criteria
-   - Determine appropriate scope: backend, complete-backend, or frontend
+1. **Extract arguments:**
+   - EPIC-ID from $ARGUMENTS (e.g., "EPIC-025")
+   - Optional --scope flag (default: auto-detect from domain)
 
-3. **Generate Scoped Repomap**
-   - Run: `python3 tools/generate_scoped_repomap.py --scope {detected-scope}`
-   - Output location: `repomaps/repomap-{scope}.txt`
+2. **Read EPIC spec:**
+   - Location: `.tasks/backlog/EPIC-{ID}-{Name}/spec.md`
+   - Extract: domain, objective, requirements, acceptance criteria
 
-4. **Generate Intelligent, Contextual Prompt**
-   - Analyze EPIC requirements and context
-   - Create focused implementation prompt emphasizing:
-     - Key architectural decisions
-     - Specific patterns to follow (from existing codebase)
-     - Testing requirements and edge cases
-     - Patch format requirements (unified diff, git apply compatible)
-   - Example prompt structure:
-     ```
-     EPIC-025: Async Email Processing
+3. **Determine scope:**
+   - Database domain → `backend`
+   - Backend domain → `complete-backend`
+   - Frontend domain → `frontend`
+   - Full-stack → `fullstack-review`
+   - Or use explicit --scope if provided
 
-     Objective: Implement asynchronous email queue with retry logic
+### Phase 2: Upload Files (Automated)
 
-     Context:
-     - Project uses FastAPI async/await patterns
-     - Email service is in src/services/email.py
-     - Tasks stored in PostgreSQL with Alembic migrations
+Run the upload helper script:
 
-     Requirements:
-     1. Create async email queue worker
-     2. Implement exponential backoff for retries
-     3. Add database schema migration
-     4. Include comprehensive error handling
-     5. Add unit tests for failure scenarios
-
-     Focus Areas:
-     - Proper async/await usage throughout
-     - Database transaction boundaries
-     - Error recovery and logging
-
-     Output Format:
-     Generate as unified diff patches compatible with 'git apply':
-     - EPIC-025-01-models.patch (database schema)
-     - EPIC-025-02-service.patch (email queue implementation)
-     - EPIC-025-03-tests.patch (unit tests)
-     ```
-
-5. **Call Automation Script with Prompt (--auto mode)**
-   ```bash
-   echo "$PROMPT" | python3 tools/chatgpt_repomap_automation.py \
-     --scope {detected-scope} \
-     --timeout 600 \
-     --no-resume
-   ```
-   - Script handles: upload repomap, send prompt, poll, download response
-   - Response saved to `chatgpt-response.json`
-   - Returns with JSON containing patches, analysis, code blocks
-
-6. **Parse Response and Extract Patches**
-   - Load `chatgpt-response.json`
-   - Extract patch section (if embedded in response text)
-   - Locate downloadable patch files (should be in response)
-   - Save patches to project root with naming: `EPIC-{ID}-01-*.patch`
-
-7. **Apply Patches**
-   ```bash
-   for patch in EPIC-{ID}-*.patch; do
-     git apply "$patch" || (echo "Failed: $patch"; exit 1)
-   done
-   ```
-   - Verify with `git status`
-   - Check diff with `git diff`
-
-8. **Validate Application**
-   - Run project validation suite
-   - Run tests if available
-   - Check for any syntax errors
-
-9. **Display Summary**
-   - List all applied patches
-   - Show changed files
-   - Report applied EPIC
-   - Suggest next steps (review, commit)
-
-## Scope Detection Logic
-- **Database** domain → `backend` scope (Alembic, migrations, DB tests)
-- **Backend** domain → `complete-backend` scope (full backend context)
-- **Frontend** domain → `frontend` scope (React, TypeScript, components)
-- **Testing** domain → `backend` scope (test infrastructure)
-- **DevOps** domain → `infrastructure` scope (Docker, CI/CD)
-
-## Reference File Selection by Domain
-- **Database**: Latest migration files, DB test examples
-- **Backend**: Service patterns, API examples, recent implementations
-- **Frontend**: Component examples, type definitions, hooks
-- **Testing**: Test patterns, fixtures, conftest.py
-
-## Output Format
-
-### Standard Output
-
+```bash
+python3 tools/chatgpt_upload_helper.py --scope {detected-scope}
 ```
-EPIC Implementation Assistant
 
-EPIC: EPIC-{ID} - {Title}
-Domain: {Domain}
-Scope: {detected-scope}
+**What this does:**
+- Generates repomap for the scope
+- Opens ChatGPT in browser (via MCP)
+- Authenticates if needed (may pause for 2FA)
+- Uploads repomap + MASTER_SPEC.md
+- Returns control to you
 
-Step 1: Generated Repomap
-  Location: repomaps/repomap-{scope}.txt
-  Size: {size} KB
+**Wait for:** "✅ Setup complete! Claude will now take over..."
 
-Step 2: Generated Contextual Prompt
-  Focuses on:
-  - Architectural patterns from your codebase
-  - Specific requirements from EPIC specification
-  - Testing and edge case coverage
-  - Patch format requirements
+### Phase 3: Generate Contextual Prompt
 
-Step 3: Sending to ChatGPT via Automation Script
-  python3 tools/chatgpt_repomap_automation.py --scope {scope}
-  - Uploading repomap + MASTER_SPEC.md
-  - Sending contextual prompt
-  - Polling for response (max 10 minutes)
-  - Downloading response JSON
+Analyze the EPIC and create an intelligent, focused prompt:
 
-Step 4: Parsing Response
-  Response file: chatgpt-response.json
-  Contains: patches, analysis, code blocks
+**Template:**
+```
+EPIC-{ID}: {Title}
 
-Step 5: Applying Patches
-  git apply EPIC-{ID}-01-*.patch
-  git apply EPIC-{ID}-02-*.patch
-  ... (as generated)
+Objective: {epic objective}
 
-Summary
-  Patches applied: {count}
-  Files changed: {count}
+Context:
+- Project: {project type, stack, patterns}
+- Domain: {backend/frontend/fullstack}
+- Key files: {relevant existing files}
 
-  Changed files:
-    M  src/services/component.py
-    M  tests/test_component.py
-    M  docs/api.md
+Requirements:
+{numbered list of requirements from EPIC}
 
-Next Steps:
-  1. Review changes: git diff
-  2. Run tests: npm run test
-  3. Validate: npm run validate-all
-  4. Commit: git add . && git commit -m "feat: Implement EPIC-{ID}"
+Focus Areas:
+{specific architectural concerns, patterns to follow, edge cases}
+
+Output Format:
+Provide implementation as git-compatible unified diff patches:
+- One patch per logical component
+- Include file paths in standard diff format
+- Add comprehensive tests
+- Follow existing code patterns
+
+Example patch naming:
+- EPIC-{ID}-01-database-schema.patch
+- EPIC-{ID}-02-service-implementation.patch
+- EPIC-{ID}-03-tests.patch
+```
+
+### Phase 4: Send Prompt (You handle via MCP)
+
+1. **Take browser snapshot:**
+   ```
+   Use mcp__playwright__browser_snapshot to see current page state
+   ```
+
+2. **Find message input:**
+   - Look for textarea/input element
+   - Extract element ref from snapshot
+
+3. **Type prompt:**
+   ```
+   Use mcp__playwright__browser_type with:
+   - element: "message textarea"
+   - ref: {extracted ref}
+   - text: {your generated prompt}
+   - submit: true (or click send button)
+   ```
+
+### Phase 5: Monitor Response (You handle via MCP)
+
+1. **Wait for completion:**
+   - Use `mcp__playwright__browser_wait_for` or periodic snapshots
+   - Look for: "Regenerate" button, "Copy code" buttons, no "Stop generating"
+
+2. **Check every 15-30 seconds:**
+   - Take snapshot: `mcp__playwright__browser_snapshot`
+   - Check if still generating (look for "thinking", "generating")
+   - Continue until complete
+
+3. **Max timeout: 10 minutes**
+
+### Phase 6: Extract Response (You handle intelligently)
+
+1. **Take final snapshot:**
+   ```
+   Use mcp__playwright__browser_snapshot to get complete response
+   ```
+
+2. **Parse response text:**
+   - Extract text content from accessibility snapshot
+   - Identify code blocks (look for ```diff, ```python, etc.)
+   - Extract patch content
+
+3. **Save patches as files:**
+   - Parse unified diff format
+   - Save to: `EPIC-{ID}-01-{description}.patch`
+   - Preserve exact formatting
+
+### Phase 7: Apply Patches
+
+1. **Dry-run each patch:**
+   ```bash
+   git apply --check EPIC-{ID}-01-*.patch
+   ```
+
+2. **Apply if valid:**
+   ```bash
+   git apply EPIC-{ID}-01-*.patch
+   ```
+
+3. **Verify:**
+   ```bash
+   git status
+   git diff
+   ```
+
+### Phase 8: Validate and Report
+
+1. **Run validation:**
+   - Project tests if available
+   - Syntax checks
+   - Build if applicable
+
+2. **Display summary:**
+   ```
+   ✅ EPIC-{ID} Implementation Complete
+
+   Patches Applied:
+   - EPIC-{ID}-01-database-schema.patch
+   - EPIC-{ID}-02-service-implementation.patch
+   - EPIC-{ID}-03-tests.patch
+
+   Files Changed:
+   M  src/models/user.py
+   M  src/services/email.py
+   A  tests/test_email_service.py
+
+   Next Steps:
+   1. Review changes: git diff
+   2. Run tests: npm run test / pytest
+   3. Validate: npm run validate-all
+   4. Commit: git add . && git commit -m "feat: Implement EPIC-{ID}"
+   ```
+
+## Example Usage
+
+```bash
+# Auto-detect scope from EPIC domain
+/chatgpt-implement EPIC-025
+
+# Override scope
+/chatgpt-implement EPIC-025 --scope=fullstack-review
 ```
 
 ## Error Handling
 
 ### EPIC Not Found
 ```
-List available EPICs:
+❌ EPIC-{ID} not found
+
+Available EPICs:
   ls -1 .tasks/backlog/ | grep EPIC
 ```
 
-### Repomap Generation Failed
+### Upload Helper Failed
 ```
+❌ Upload failed
+
 Troubleshooting:
-1. Check scope name: python3 tools/generate_scoped_repomap.py --list-scopes
-2. Verify files exist in src/, api/, frontend/ directories
-3. Check disk space: df -h
-4. Manually specify scope: generate-repomap backend
+1. Check MCP server: ps aux | grep playwright
+2. Restart MCP: ~/bin/start-playwright-extension.sh
+3. Verify gopass: gopass show chatgpt_user
 ```
 
-### Automation Script Errors
-
-**Script not found:**
+### Gopass Not Configured
 ```
-❌ tools/chatgpt_repomap_automation.py not found
+❌ Credentials not found
 
-Fix:
-1. Verify installation: /tier1-deploy or /tier1-update-surgical
-2. Check: ls -la tools/chatgpt_repomap_automation.py
-```
-
-**Gopass credentials missing:**
-```
-❌ Failed to retrieve credentials from gopass
-
-Fix:
+Setup:
 1. gopass insert chatgpt_user  # Your ChatGPT email
-2. gopass insert chatgpt_pw    # Your ChatGPT password
+2. gopass insert chatgpt_pw    # Your password
 ```
 
-**MCP server not available:**
-```
-❌ Playwright MCP not available
+### Response Parsing Issues
 
-Ensure playwright-mcp service is running:
-  ps aux | grep playwright
-  curl http://localhost:8931/mcp
-
-Restart:
-  systemctl restart playwright-mcp
-```
-
-### Response Parsing Errors
-
-**Response file not created:**
-```
-Check automation script output:
-  tail -20 ~/.chatgpt_session_state.json
-
-Verify response was downloaded:
-  ls -la chatgpt-response.json
-```
-
-**Patches not found in response:**
-```
-Troubleshooting:
-1. Check response structure: python3 -m json.tool chatgpt-response.json
-2. Review 'patches' array in response
-3. Check 'raw_response' for embedded patch text
-4. If patches embedded as text: extract manually and save as .patch files
-```
+If patches aren't in standard unified diff format:
+1. Manually review response in browser
+2. Copy patches to files manually
+3. Ask ChatGPT to regenerate in proper format
 
 ### Patch Application Failed
 
-```
-❌ Failed to apply patch: EPIC-{ID}-01-component.patch
+```bash
+# Check what's wrong
+git apply --check EPIC-{ID}-01-*.patch
 
-Troubleshooting:
-1. Verify patch format: file EPIC-{ID}-01-component.patch
-2. Check git status: git status
-3. Dry-run patch: git apply --check EPIC-{ID}-01-component.patch
-4. Review patch content: head -50 EPIC-{ID}-01-component.patch
-5. Check for path mismatches in patch headers
-6. Ensure target files exist in repository
+# Try with reject files (for conflicts)
+git apply --reject EPIC-{ID}-01-*.patch
 
-Manual fix:
-  - Edit patch to correct paths
-  - Apply manually with: git apply --reject EPIC-{ID}-01-component.patch
-  - Review .rej files for conflicts
+# Review reject files
+cat *.rej
 ```
+
+## Tips for Best Results
+
+1. **Be specific in prompts:**
+   - Reference exact file paths from repomap
+   - Mention existing patterns to follow
+   - Request test coverage explicitly
+
+2. **Verify scope coverage:**
+   - Check repomap includes relevant files
+   - Use larger scope if files are missing
+
+3. **Ask for proper format:**
+   - Explicitly request unified diff patches
+   - Specify git apply compatibility
+   - Request separate patches per component
+
+4. **Iterate if needed:**
+   - If response isn't perfect, ask for refinements
+   - Use "Regenerate" in ChatGPT
+   - Provide more context if needed
+
+## Notes
+
+- **No state persistence:** Each run is fresh (no .chatgpt_session_state.json)
+- **Claude handles complexity:** You parse responses intelligently, not brittle regex
+- **Flexible:** You adapt to ChatGPT UI changes in real-time
+- **Interactive:** You can have multi-turn conversations with ChatGPT as needed
